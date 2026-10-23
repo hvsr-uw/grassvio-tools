@@ -1,0 +1,10 @@
+{
+  "frames_total": 441,
+  "frames_used": 147,
+  "pairs_skipped": 1,
+  "median_inliers": 2251.0,
+  "canvas_width_px": 2204,
+  "canvas_height_px": 1891,
+  "stride": 3,
+  "detector": "sift"
+}
