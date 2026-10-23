@@ -82,7 +82,19 @@ def load_frames_from_folder(folder):
 def make_detector(name):
     if name == "orb":
         return cv2.ORB_create(nfeatures=3000)
-    return cv2.SIFT_create()
+    # Cap the feature count: the matcher cannot handle more than about
+    # 32000 descriptors per image, and grass easily produces more.
+    return cv2.SIFT_create(nfeatures=10000)
+
+
+def downscale(frame, max_dim=1600):
+    """Shrink very large photos so matching stays fast and reliable."""
+    h, w = frame.shape[:2]
+    scale = min(1.0, max_dim / max(h, w))
+    if scale >= 1.0:
+        return frame
+    return cv2.resize(frame, (round(w * scale), round(h * scale)),
+                      interpolation=cv2.INTER_AREA)
 
 
 def pair_homography(detector, matcher, gray_cur, gray_next):
@@ -122,6 +134,7 @@ def stitch(frames, stride, detector_name):
         matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
     else:
         matcher = cv2.BFMatcher(cv2.NORM_L2)
+    frames = [downscale(f) for f in frames]
     grays = [cv2.cvtColor(f, cv2.COLOR_BGR2GRAY) for f in frames]
 
     chosen = list(range(0, len(frames), stride))
