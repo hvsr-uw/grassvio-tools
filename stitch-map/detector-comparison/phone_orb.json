@@ -1,0 +1,10 @@
+{
+  "frames_total": 7,
+  "frames_used": 7,
+  "pairs_skipped": 5,
+  "median_inliers": 29.0,
+  "canvas_width_px": 1282,
+  "canvas_height_px": 1975,
+  "stride": 1,
+  "detector": "orb"
+}
