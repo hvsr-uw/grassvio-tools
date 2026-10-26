@@ -22,6 +22,10 @@ Options:
                     harder matching.
     --detector X    sift or orb (default sift).
     --max-frames N  stop after N frames (default: no limit).
+    --loop-check    also match each frame against earlier frames at least
+                    5 chosen frames back. A strong loop match (at least 50
+                    inliers) re-anchors the frame: its transform comes from
+                    the loop match instead of the drifted chain.
 
 Output: the map image plus a small .json file next to it with the run stats.
 """
@@ -41,6 +45,11 @@ from explore_bag import parse_image, COLOR  # noqa: E402
 
 RANSAC_THRESH_PX = 3.0
 MIN_INLIERS = 20
+LOOP_REANCHOR_MIN = 50
+# A loop match must be to a frame at least this many chosen frames back.
+# Closer frames still overlap from normal forward motion, so matching them
+# is not a loop closure, it is just a shorter hop along the chain.
+LOOP_MIN_GAP = 5
 
 
 def load_frames_from_bag(bag_path):
@@ -97,13 +106,14 @@ def downscale(frame, max_dim=1600):
                       interpolation=cv2.INTER_AREA)
 
 
-def pair_homography(detector, matcher, gray_cur, gray_next):
+def pair_homography(feats_cur, feats_next, matcher):
     """Homography that maps points in the next frame into the current frame.
 
-    Returns (H, inlier_count) or (None, 0) when the match is too weak.
+    feats are (keypoints, descriptors) pairs already computed for each
+    frame. Returns (H, inlier_count) or (None, 0) when the match is too weak.
     """
-    kp_cur, des_cur = detector.detectAndCompute(gray_cur, None)
-    kp_next, des_next = detector.detectAndCompute(gray_next, None)
+    kp_cur, des_cur = feats_cur
+    kp_next, des_next = feats_next
     if des_cur is None or des_next is None:
         return None, 0
     matches = matcher.knnMatch(des_next, des_cur, k=2)
@@ -127,8 +137,16 @@ def pair_homography(detector, matcher, gray_cur, gray_next):
     return H, inliers
 
 
-def stitch(frames, stride, detector_name):
-    """Chain pairwise homographies and paste every frame onto one canvas."""
+def stitch(frames, stride, detector_name, loop_check=False):
+    """Chain pairwise homographies and paste every frame onto one canvas.
+
+    With loop_check on, each frame is also matched against earlier frames
+    at least LOOP_MIN_GAP chosen frames back. A strong loop match (at
+    least 50 inliers) re-anchors the frame: its transform comes from the
+    loop match instead of the drifted chain, and later frames chain from
+    there. Neighbour pair stats keep their meaning; loop matches are
+    reported separately in the stats.
+    """
     detector = make_detector(detector_name)
     if detector_name == "orb":
         matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
@@ -138,18 +156,39 @@ def stitch(frames, stride, detector_name):
     grays = [cv2.cvtColor(f, cv2.COLOR_BGR2GRAY) for f in frames]
 
     chosen = list(range(0, len(frames), stride))
+    feats = {idx: detector.detectAndCompute(grays[idx], None)
+             for idx in chosen}
     # transforms[i] maps frame chosen[i] into frame chosen[0] coordinates.
     transforms = [np.eye(3)]
     inlier_counts = []
     skipped = 0
-    for a, b in zip(chosen[:-1], chosen[1:]):
-        H, inliers = pair_homography(detector, matcher, grays[a], grays[b])
+    loop_matches = []
+    for pos in range(1, len(chosen)):
+        a, b = chosen[pos - 1], chosen[pos]
+        H, inliers = pair_homography(feats[a], feats[b], matcher)
         if H is None:
             skipped += 1
             transforms.append(transforms[-1].copy())
         else:
             inlier_counts.append(inliers)
             transforms.append(transforms[-1] @ H)
+        if loop_check:
+            best_j, best_H, best_n = None, None, 0
+            for jpos in range(pos - LOOP_MIN_GAP + 1):
+                j = chosen[jpos]
+                Hj, nj = pair_homography(feats[j], feats[b], matcher)
+                if Hj is not None and nj > best_n:
+                    best_j, best_H, best_n = jpos, Hj, nj
+            if best_j is not None:
+                reanchored = best_n >= LOOP_REANCHOR_MIN
+                if reanchored:
+                    transforms[pos] = transforms[best_j] @ best_H
+                loop_matches.append({
+                    "frame": pos,
+                    "matched_frame": best_j,
+                    "inliers": best_n,
+                    "reanchored": reanchored,
+                })
 
     h, w = frames[0].shape[:2]
     corners = np.float32([[0, 0], [w, 0], [w, h], [0, h]]).reshape(-1, 1, 2)
@@ -184,6 +223,8 @@ def stitch(frames, stride, detector_name):
         "canvas_height_px": int(canvas_h),
         "stride": stride,
         "detector": detector_name,
+        "loop_check": loop_check,
+        "loop_matches": loop_matches,
     }
     return mosaic, stats
 
@@ -198,6 +239,7 @@ def main():
     ap.add_argument("--stride", type=int, default=5)
     ap.add_argument("--detector", choices=("sift", "orb"), default="sift")
     ap.add_argument("--max-frames", type=int, default=0)
+    ap.add_argument("--loop-check", action="store_true")
     args = ap.parse_args()
 
     if args.bag:
@@ -212,7 +254,8 @@ def main():
         print("not enough frames to stitch", file=sys.stderr)
         return 1
 
-    mosaic, stats = stitch(frames, args.stride, args.detector)
+    mosaic, stats = stitch(frames, args.stride, args.detector,
+                           loop_check=args.loop_check)
     cv2.imwrite(args.out, mosaic)
     stats_path = os.path.splitext(args.out)[0] + ".json"
     with open(stats_path, "w") as f:
