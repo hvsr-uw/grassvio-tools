@@ -72,7 +72,7 @@ def main():
     else:
         frames = load_frames_from_folder(args.frames)
     frames = [downscale(f) for f in frames]
-    chosen = list(range(0, len(frames), stride))
+    chosen = list(range(0, len(frames), args.stride))
     n = len(chosen)
 
     with open(args.pairs) as f:
