@@ -1,0 +1,19 @@
+{
+  "frames_total": 7,
+  "frames_used": 7,
+  "pairs_skipped": 2,
+  "median_inliers": 67.0,
+  "canvas_width_px": 3766,
+  "canvas_height_px": 3148,
+  "stride": 1,
+  "detector": "sift",
+  "loop_check": true,
+  "loop_matches": [
+    {
+      "frame": 6,
+      "matched_frame": 0,
+      "inliers": 96,
+      "reanchored": true
+    }
+  ]
+}
