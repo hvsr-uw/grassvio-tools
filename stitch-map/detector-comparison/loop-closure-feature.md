@@ -35,6 +35,15 @@ frame overlaps frames from much earlier, and the chain was already
 consistent there. Loop closure changes nothing on this take, which is
 the expected result when there is no drift to correct.
 
+October take (SIFT, stride 3, loop check on): 142 loop matches are found
+with a median of 2167 inliers, and 141 frames are re-anchored. The
+neighbour stats are identical to the baseline (147 frames used, 1
+skipped, median 2251 inliers), but the canvas comes out slightly larger
+at 2288 by 1991 pixels instead of 2204 by 1891, and the far end stretch
+is still visible in the map. Same story as the September take: the chain
+was already consistent, so loop closure is neutral here. The phone
+photos remain the one case where it genuinely helps.
+
 Usage:
 
     python3 stitch_map.py --frames <folder> --stride 1 --detector sift \
