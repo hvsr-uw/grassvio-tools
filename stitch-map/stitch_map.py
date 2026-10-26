@@ -31,7 +31,10 @@ Options:
                     spanning tree over all frame pairs and places each frame
                     along its strongest path back to the first frame, so a
                     frame whose neighbour pair fails can still be placed
-                    from a later frame that matches it well.
+                    from a later frame that matches it well. Tree mode
+                    saves every pair result to <out>_pairs.json as it goes,
+                    and resumes from that file if the run is interrupted,
+                    instead of starting over.
     --lowe-ratio R  Lowe ratio for the matcher (default 0.75). Looser
                     values accept more matches and can rescue a weak pair.
 
@@ -198,7 +201,7 @@ def place_by_tree(n, edges):
 
 
 def stitch(frames, stride, detector_name, loop_check=False, place="chain",
-           lowe_ratio=LOWE_RATIO):
+           lowe_ratio=LOWE_RATIO, pairs_checkpoint=None):
     """Chain pairwise homographies and paste every frame onto one canvas.
 
     With loop_check on, each frame is also matched against earlier frames
@@ -226,15 +229,47 @@ def stitch(frames, stride, detector_name, loop_check=False, place="chain",
     # transforms[i] maps frame chosen[i] into frame chosen[0] coordinates.
     loop_matches = []
     tree_edges = []
+    pairs_from_checkpoint = 0
     if place == "tree":
+        ckpt_meta = {"detector": detector_name, "lowe_ratio": lowe_ratio,
+                     "n_chosen": len(chosen), "stride": stride}
+        ckpt = {}
+        if pairs_checkpoint and os.path.exists(pairs_checkpoint):
+            try:
+                with open(pairs_checkpoint) as f:
+                    saved = json.load(f)
+                if saved.get("meta") == ckpt_meta:
+                    ckpt = saved.get("pairs", {})
+            except (OSError, ValueError):
+                ckpt = {}
         edges = []
+        dirty = 0
         for ipos in range(len(chosen)):
             for jpos in range(ipos + 1, len(chosen)):
+                key = f"{ipos},{jpos}"
+                if key in ckpt:
+                    entry = ckpt[key]
+                    pairs_from_checkpoint += 1
+                    if (entry["H"] is not None
+                            and entry["inliers"] >= MIN_INLIERS):
+                        edges.append((entry["inliers"], ipos, jpos,
+                                      np.array(entry["H"], dtype=float)))
+                    continue
                 H, n_inliers = pair_homography(
                     feats[chosen[ipos]], feats[chosen[jpos]], matcher,
                     ratio=lowe_ratio)
+                ckpt[key] = {"inliers": n_inliers,
+                             "H": H.tolist() if H is not None else None}
+                dirty += 1
                 if H is not None:
                     edges.append((n_inliers, ipos, jpos, H))
+                if pairs_checkpoint and dirty >= 50:
+                    with open(pairs_checkpoint, "w") as f:
+                        json.dump({"meta": ckpt_meta, "pairs": ckpt}, f)
+                    dirty = 0
+        if pairs_checkpoint and dirty:
+            with open(pairs_checkpoint, "w") as f:
+                json.dump({"meta": ckpt_meta, "pairs": ckpt}, f)
         transforms, inlier_counts, tree_edges, unplaced = place_by_tree(
             len(chosen), edges)
         skipped = len(unplaced)
@@ -309,6 +344,7 @@ def stitch(frames, stride, detector_name, loop_check=False, place="chain",
         "loop_check": loop_check,
         "loop_matches": loop_matches,
         "tree_edges": tree_edges,
+        "pairs_from_checkpoint": pairs_from_checkpoint,
     }
     return mosaic, stats
 
@@ -340,9 +376,12 @@ def main():
         print("not enough frames to stitch", file=sys.stderr)
         return 1
 
+    ckpt = None
+    if args.place == "tree":
+        ckpt = os.path.splitext(args.out)[0] + "_pairs.json"
     mosaic, stats = stitch(frames, args.stride, args.detector,
                            loop_check=args.loop_check, place=args.place,
-                           lowe_ratio=args.lowe_ratio)
+                           lowe_ratio=args.lowe_ratio, pairs_checkpoint=ckpt)
     cv2.imwrite(args.out, mosaic)
     stats_path = os.path.splitext(args.out)[0] + ".json"
     with open(stats_path, "w") as f:
