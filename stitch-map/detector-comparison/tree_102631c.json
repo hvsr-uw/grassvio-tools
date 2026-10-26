@@ -1,0 +1,136 @@
+{
+  "frames_total": 124,
+  "frames_used": 25,
+  "pairs_skipped": 0,
+  "median_inliers": 1734.5,
+  "canvas_width_px": 672,
+  "canvas_height_px": 507,
+  "stride": 5,
+  "detector": "sift",
+  "placement": "tree",
+  "lowe_ratio": 0.75,
+  "loop_check": false,
+  "loop_matches": [],
+  "tree_edges": [
+    {
+      "from": 0,
+      "to": 1,
+      "inliers": 1741
+    },
+    {
+      "from": 1,
+      "to": 2,
+      "inliers": 1711
+    },
+    {
+      "from": 2,
+      "to": 3,
+      "inliers": 1676
+    },
+    {
+      "from": 3,
+      "to": 4,
+      "inliers": 1755
+    },
+    {
+      "from": 3,
+      "to": 8,
+      "inliers": 1750
+    },
+    {
+      "from": 8,
+      "to": 7,
+      "inliers": 1774
+    },
+    {
+      "from": 7,
+      "to": 12,
+      "inliers": 1875
+    },
+    {
+      "from": 7,
+      "to": 13,
+      "inliers": 1772
+    },
+    {
+      "from": 13,
+      "to": 22,
+      "inliers": 1758
+    },
+    {
+      "from": 12,
+      "to": 10,
+      "inliers": 1734
+    },
+    {
+      "from": 10,
+      "to": 11,
+      "inliers": 1782
+    },
+    {
+      "from": 10,
+      "to": 23,
+      "inliers": 1749
+    },
+    {
+      "from": 7,
+      "to": 9,
+      "inliers": 1732
+    },
+    {
+      "from": 11,
+      "to": 21,
+      "inliers": 1731
+    },
+    {
+      "from": 11,
+      "to": 18,
+      "inliers": 1712
+    },
+    {
+      "from": 18,
+      "to": 17,
+      "inliers": 1749
+    },
+    {
+      "from": 17,
+      "to": 16,
+      "inliers": 1735
+    },
+    {
+      "from": 17,
+      "to": 15,
+      "inliers": 1711
+    },
+    {
+      "from": 15,
+      "to": 14,
+      "inliers": 1710
+    },
+    {
+      "from": 3,
+      "to": 5,
+      "inliers": 1691
+    },
+    {
+      "from": 7,
+      "to": 6,
+      "inliers": 1690
+    },
+    {
+      "from": 23,
+      "to": 24,
+      "inliers": 1688
+    },
+    {
+      "from": 17,
+      "to": 19,
+      "inliers": 1668
+    },
+    {
+      "from": 19,
+      "to": 20,
+      "inliers": 1928
+    }
+  ]
+}
