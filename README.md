@@ -10,7 +10,7 @@ Run it like this:
 
 python stitch_map.py --bag <take>.db3 --out map.png
 
-The --stride option uses every Nth frame and the default is 5. The --detector option picks sift or orb and the default is sift. The --loop-check option also matches each frame against earlier frames at least 5 frames back, and a strong loop match re-anchors the frame instead of the drifted chain.
+The --stride option uses every Nth frame and the default is 5. The --detector option picks sift or orb and the default is sift. The --loop-check option also matches each frame against earlier frames at least 5 frames back, and a strong loop match re-anchors the frame instead of the drifted chain. The --place tree option places each frame along the strongest spanning tree over all frame pairs instead of the neighbour chain, so a frame whose neighbour pair fails can still be placed from a frame that matches it well, and --lowe-ratio tunes the matcher.
 
 Tested on two takes. The September take gave a clean map of 672 by 507 pixels. The October 7 take gave a wider map of 2204 by 1891 pixels, but the far end stretches a bit because small errors add up over many frames.
 
