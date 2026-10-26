@@ -1,0 +1,13 @@
+{
+  "frames_total": 124,
+  "frames_used": 25,
+  "frames_unplaced": [],
+  "pairs_used": 300,
+  "iterations": 30,
+  "residual_before_px": 0.06529015167074957,
+  "residual_after_px": 0.03478669608028809,
+  "canvas_width_px": 672,
+  "canvas_height_px": 507,
+  "stride": 5,
+  "placement": "global"
+}
