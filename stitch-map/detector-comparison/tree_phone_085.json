@@ -1,0 +1,46 @@
+{
+  "frames_total": 7,
+  "frames_used": 7,
+  "pairs_skipped": 0,
+  "median_inliers": 78.0,
+  "canvas_width_px": 3523,
+  "canvas_height_px": 2771,
+  "stride": 1,
+  "detector": "sift",
+  "placement": "tree",
+  "lowe_ratio": 0.85,
+  "loop_check": false,
+  "loop_matches": [],
+  "tree_edges": [
+    {
+      "from": 0,
+      "to": 6,
+      "inliers": 103
+    },
+    {
+      "from": 6,
+      "to": 5,
+      "inliers": 163
+    },
+    {
+      "from": 5,
+      "to": 4,
+      "inliers": 53
+    },
+    {
+      "from": 4,
+      "to": 3,
+      "inliers": 24
+    },
+    {
+      "from": 3,
+      "to": 2,
+      "inliers": 23
+    },
+    {
+      "from": 2,
+      "to": 1,
+      "inliers": 178
+    }
+  ]
+}
