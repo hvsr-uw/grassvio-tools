@@ -26,6 +26,14 @@ Options:
                     5 chosen frames back. A strong loop match (at least 50
                     inliers) re-anchors the frame: its transform comes from
                     the loop match instead of the drifted chain.
+    --place X       chain or tree (default chain). Chain places each frame
+                    from its neighbour only. Tree builds the strongest
+                    spanning tree over all frame pairs and places each frame
+                    along its strongest path back to the first frame, so a
+                    frame whose neighbour pair fails can still be placed
+                    from a later frame that matches it well.
+    --lowe-ratio R  Lowe ratio for the matcher (default 0.75). Looser
+                    values accept more matches and can rescue a weak pair.
 
 Output: the map image plus a small .json file next to it with the run stats.
 """
@@ -45,6 +53,7 @@ from explore_bag import parse_image, COLOR  # noqa: E402
 
 RANSAC_THRESH_PX = 3.0
 MIN_INLIERS = 20
+LOWE_RATIO = 0.75
 LOOP_REANCHOR_MIN = 50
 # A loop match must be to a frame at least this many chosen frames back.
 # Closer frames still overlap from normal forward motion, so matching them
@@ -106,7 +115,7 @@ def downscale(frame, max_dim=1600):
                       interpolation=cv2.INTER_AREA)
 
 
-def pair_homography(feats_cur, feats_next, matcher):
+def pair_homography(feats_cur, feats_next, matcher, ratio=LOWE_RATIO):
     """Homography that maps points in the next frame into the current frame.
 
     feats are (keypoints, descriptors) pairs already computed for each
@@ -122,7 +131,7 @@ def pair_homography(feats_cur, feats_next, matcher):
         if len(pair) != 2:
             continue
         m, n = pair
-        if m.distance < 0.75 * n.distance:
+        if m.distance < ratio * n.distance:
             good.append(m)
     if len(good) < MIN_INLIERS:
         return None, 0
@@ -137,7 +146,59 @@ def pair_homography(feats_cur, feats_next, matcher):
     return H, inliers
 
 
-def stitch(frames, stride, detector_name, loop_check=False):
+def place_by_tree(n, edges):
+    """Place every frame along the strongest spanning tree over all pairs.
+
+    edges is a list of (inliers, i, j, H) where H maps frame j into frame i
+    and i < j. Prim's algorithm from frame 0 always takes the strongest
+    edge that reaches a new frame, so a frame whose neighbour pair fails
+    can still be placed from any frame that matches it well, including a
+    later frame. Returns (transforms, edge_inliers, edges_used, unplaced),
+    where transforms[i] maps frame i into frame 0 coordinates.
+    """
+    by_frame = {}
+    for n_inliers, i, j, H in edges:
+        by_frame.setdefault(i, []).append((n_inliers, j, H))
+        by_frame.setdefault(j, []).append((n_inliers, i, H))
+    transforms = [None] * n
+    transforms[0] = np.eye(3)
+    reached = {0}
+    banned = set()
+    edge_inliers = []
+    edges_used = []
+    while len(reached) < n:
+        best = None
+        for r in reached:
+            for n_inliers, other, H in by_frame.get(r, []):
+                if other not in reached and (r, other) not in banned and (
+                        best is None or n_inliers > best[0]):
+                    best = (n_inliers, r, other, H)
+        if best is None:
+            break
+        n_inliers, r, other, H = best
+        if r < other:
+            # H maps other into r, and r is already placed.
+            transforms[other] = transforms[r] @ H
+        else:
+            # Edge runs the other way: invert it to place other from r.
+            try:
+                transforms[other] = transforms[r] @ np.linalg.inv(H)
+            except np.linalg.LinAlgError:
+                banned.add((r, other))
+                continue
+        reached.add(other)
+        edge_inliers.append(n_inliers)
+        edges_used.append({"from": r, "to": other, "inliers": n_inliers})
+    unplaced = []
+    for pos in range(1, n):
+        if transforms[pos] is None:
+            transforms[pos] = transforms[pos - 1].copy()
+            unplaced.append(pos)
+    return transforms, edge_inliers, edges_used, unplaced
+
+
+def stitch(frames, stride, detector_name, loop_check=False, place="chain",
+           lowe_ratio=LOWE_RATIO):
     """Chain pairwise homographies and paste every frame onto one canvas.
 
     With loop_check on, each frame is also matched against earlier frames
@@ -146,6 +207,10 @@ def stitch(frames, stride, detector_name, loop_check=False):
     loop match instead of the drifted chain, and later frames chain from
     there. Neighbour pair stats keep their meaning; loop matches are
     reported separately in the stats.
+
+    With place="tree", every frame pair is matched and frames are placed
+    along the strongest spanning tree back to the first frame instead of
+    along the neighbour chain.
     """
     detector = make_detector(detector_name)
     if detector_name == "orb":
@@ -159,36 +224,52 @@ def stitch(frames, stride, detector_name, loop_check=False):
     feats = {idx: detector.detectAndCompute(grays[idx], None)
              for idx in chosen}
     # transforms[i] maps frame chosen[i] into frame chosen[0] coordinates.
-    transforms = [np.eye(3)]
-    inlier_counts = []
-    skipped = 0
     loop_matches = []
-    for pos in range(1, len(chosen)):
-        a, b = chosen[pos - 1], chosen[pos]
-        H, inliers = pair_homography(feats[a], feats[b], matcher)
-        if H is None:
-            skipped += 1
-            transforms.append(transforms[-1].copy())
-        else:
-            inlier_counts.append(inliers)
-            transforms.append(transforms[-1] @ H)
-        if loop_check:
-            best_j, best_H, best_n = None, None, 0
-            for jpos in range(pos - LOOP_MIN_GAP + 1):
-                j = chosen[jpos]
-                Hj, nj = pair_homography(feats[j], feats[b], matcher)
-                if Hj is not None and nj > best_n:
-                    best_j, best_H, best_n = jpos, Hj, nj
-            if best_j is not None:
-                reanchored = best_n >= LOOP_REANCHOR_MIN
-                if reanchored:
-                    transforms[pos] = transforms[best_j] @ best_H
-                loop_matches.append({
-                    "frame": pos,
-                    "matched_frame": best_j,
-                    "inliers": best_n,
-                    "reanchored": reanchored,
-                })
+    tree_edges = []
+    if place == "tree":
+        edges = []
+        for ipos in range(len(chosen)):
+            for jpos in range(ipos + 1, len(chosen)):
+                H, n_inliers = pair_homography(
+                    feats[chosen[ipos]], feats[chosen[jpos]], matcher,
+                    ratio=lowe_ratio)
+                if H is not None:
+                    edges.append((n_inliers, ipos, jpos, H))
+        transforms, inlier_counts, tree_edges, unplaced = place_by_tree(
+            len(chosen), edges)
+        skipped = len(unplaced)
+    else:
+        transforms = [np.eye(3)]
+        inlier_counts = []
+        skipped = 0
+        for pos in range(1, len(chosen)):
+            a, b = chosen[pos - 1], chosen[pos]
+            H, inliers = pair_homography(feats[a], feats[b], matcher,
+                                         ratio=lowe_ratio)
+            if H is None:
+                skipped += 1
+                transforms.append(transforms[-1].copy())
+            else:
+                inlier_counts.append(inliers)
+                transforms.append(transforms[-1] @ H)
+            if loop_check:
+                best_j, best_H, best_n = None, None, 0
+                for jpos in range(pos - LOOP_MIN_GAP + 1):
+                    j = chosen[jpos]
+                    Hj, nj = pair_homography(feats[j], feats[b], matcher,
+                                             ratio=lowe_ratio)
+                    if Hj is not None and nj > best_n:
+                        best_j, best_H, best_n = jpos, Hj, nj
+                if best_j is not None:
+                    reanchored = best_n >= LOOP_REANCHOR_MIN
+                    if reanchored:
+                        transforms[pos] = transforms[best_j] @ best_H
+                    loop_matches.append({
+                        "frame": pos,
+                        "matched_frame": best_j,
+                        "inliers": best_n,
+                        "reanchored": reanchored,
+                    })
 
     h, w = frames[0].shape[:2]
     corners = np.float32([[0, 0], [w, 0], [w, h], [0, h]]).reshape(-1, 1, 2)
@@ -223,8 +304,11 @@ def stitch(frames, stride, detector_name, loop_check=False):
         "canvas_height_px": int(canvas_h),
         "stride": stride,
         "detector": detector_name,
+        "placement": place,
+        "lowe_ratio": lowe_ratio,
         "loop_check": loop_check,
         "loop_matches": loop_matches,
+        "tree_edges": tree_edges,
     }
     return mosaic, stats
 
@@ -240,6 +324,8 @@ def main():
     ap.add_argument("--detector", choices=("sift", "orb"), default="sift")
     ap.add_argument("--max-frames", type=int, default=0)
     ap.add_argument("--loop-check", action="store_true")
+    ap.add_argument("--place", choices=("chain", "tree"), default="chain")
+    ap.add_argument("--lowe-ratio", type=float, default=LOWE_RATIO)
     args = ap.parse_args()
 
     if args.bag:
@@ -255,7 +341,8 @@ def main():
         return 1
 
     mosaic, stats = stitch(frames, args.stride, args.detector,
-                           loop_check=args.loop_check)
+                           loop_check=args.loop_check, place=args.place,
+                           lowe_ratio=args.lowe_ratio)
     cv2.imwrite(args.out, mosaic)
     stats_path = os.path.splitext(args.out)[0] + ".json"
     with open(stats_path, "w") as f:
