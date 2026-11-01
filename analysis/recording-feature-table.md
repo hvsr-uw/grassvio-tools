@@ -1,23 +1,26 @@
-# Recording feature table — all 36 takes
+# Recording feature table — all 41 takes
 
-Date: 2026-10-30. Built for Jinming's Oct 28 ask: comb through all the recordings
-and tabulate what features each one has (wind, loop, translation, rotation,
-translation + rotation, etc.). Loop and wind checks run on all 35 usable takes
-on 2026-10-30; every cell below is measured except where marked.
+Date: 2026-10-30, extended 2026-11-01. Built for Jinming's Oct 28 ask: comb
+through all the recordings and tabulate what features each one has (wind,
+loop, translation, rotation, translation + rotation, etc.). Loop and wind
+checks run on all 35 usable takes on 2026-10-30 and on the 5 new takes on
+2026-11-01; every cell below is measured except where marked.
 
-Coverage: 36 .db3 takes from the three Box download sessions
-(sess-197710181, sess-1191256009, sess-1861756418) — 21 new takes recorded
-2026-10-26 (Jinming's loop/wind set) plus 15 older takes from 2026-09-26 and
-2026-10-07. Every bag was resolved by its exact filename. All reads were
-read-only; no bag was modified, moved, or renamed.
+Coverage: 41 .db3 takes from four Box download sessions
+(sess-197710181, sess-1191256009, sess-1861756418, sess-rotation-nov01) —
+21 takes recorded 2026-10-26 (Jinming's loop/wind set), 5 takes recorded
+2026-10-30 (Jinming's "more rotation" set), plus 15 older takes from
+2026-09-26 and 2026-10-07. Every bag was resolved by its exact filename.
+All reads were read-only; no bag was modified, moved, or renamed.
 
 ## Methods
 
-Per-take stream stats were computed with one uniform script over all 36 bags:
+Per-take stream stats were computed with one uniform script over all 41 bags:
 color/depth message counts, color span (duration), gyro magnitude stats (mean,
 median, p95, fraction of samples above 0.25 rad/s) from header timestamps, and
-accel mean magnitude. The 21 new takes were independently inspected on Oct 27;
-the recomputed numbers here reproduce those values.
+accel mean magnitude. The 21 Oct-26 takes were independently inspected on
+Oct 27; the recomputed numbers here reproduce those values. The 5 Oct-30
+takes were measured with the same procedure on Nov 1.
 
 Rotation level thresholds (gyro magnitude): still = mean below 0.10 rad/s and
 under 5% of samples above 0.25 rad/s; gentle = mean 0.10-0.18 or 5-20% above
@@ -42,7 +45,7 @@ regardless of the number. 0.2-0.4 mm is "uncertain"; below 0.2 mm is
 arbitrary: 172859 (0.197 mm, negligible) and 173017 (0.200 mm, uncertain) are
 effectively the same measurement on opposite sides of it.
 
-Loop check (all 35 usable takes): SIFT-match the last 5 stride-5 chosen frames
+Loop check (all 40 usable takes): SIFT-match the last 5 stride-5 chosen frames
 against the first 5 (25 pairs; Lowe 0.75, RANSAC 3.0 px — the stitch script's
 own settings). Verdict YES if any pair reaches 20+ inliers (the stitch
 script's MIN_INLIERS), else NO. This tests end-vs-start closure, the practical
@@ -50,7 +53,7 @@ meaning of a "loop take" for loop-closure testing. On takes where the camera
 never moves, the end trivially overlaps the start; those are marked trivially
 closed, not genuine loops.
 
-Wind check (all 35 usable takes): rigid-fit residual analysis per consecutive
+Wind check (all 40 usable takes): rigid-fit residual analysis per consecutive
 frame pair, the same method as the Oct 27 wind test on 173701. Pooled
 median/p90 residual per take, compared against the wind-free control 102631c
 (recomputed here as pooled median 0.185 px / p90 0.458 px, confirming the
@@ -62,19 +65,22 @@ over 3D grass, and no take is labeled as wind.
 
 ## Evidence rules
 
-- Loop measured on all 35 usable takes (end-vs-start, 25 pairs each).
+- Loop measured on all 40 usable takes (end-vs-start, 25 pairs each).
   Genuine loops, camera moved and end overlaps start: 080033 (all 25 pairs at
   1444-1882 inliers), 075947 (all 25 pairs at 133-195 inliers), 155419 (max
   728 inliers on a 1.8 s take, rotation in place). Weak but consistent,
   above the 20-inlier bar across the matrix: 172532 (max 45), 172828
   (max 37), 172859 (max 51). All still takes close trivially — the camera
   never left, so the end overlaps the start with hundreds to thousands of
-  inliers (e.g. 102737a: 2129). 173807 is confirmed NO again (max 0, all 25
-  pairs zero), on top of the earlier 4,400-pair tree evidence. Every other
-  moving take: NO.
-- Wind measured on all 35 usable takes against the 102631c control. No wind
+  inliers (e.g. 102737a: 2129, 174745: 1486). 173807 is confirmed NO again
+  (max 0, all 25 pairs zero), on top of the earlier 4,400-pair tree
+  evidence. The four moving Oct-30 takes are all NO (174702, 174818,
+  174847: max 0; 174918: max 12). Every other moving take: NO.
+- Wind measured on all 40 usable takes against the 102631c control. No wind
   signal: 102608b, 102631c, 102706d, 102737a, 153136, 153610, 153825, 155411,
-  075947, 080033, 172532, 172644, 172739, 173045, 173403. Uncertain: 155419,
+  075947, 080033, 172532, 172644, 172739, 173045, 173403, 174702, 174745,
+  174818, 174847, 174918 (the Oct-30 takes all sit at control level:
+  pooled medians 0.180-0.225 px). Uncertain: 155419,
   155430, 155507, 155555, 155614, 172828, 173507. Non-rigid signal, not
   separated from parallax: 172859, 172912, 172955, 173017, 173124, 173154,
   173220, 173250, 173540, 173603, 173628, 173701, 173807.
@@ -136,6 +142,16 @@ over 3D grass, and no take is labeled as wind.
 | 20261007_075947 | 2026-10-07 | 7.8 | 235 | translation+rotation (gentle) | yes (max 195) | no wind signal (measured) | measured / measured | End-vs-start: all 25 pairs at 133-195 inliers — loop. |
 | 20261007_080033 | 2026-10-07 | 14.7 | 441 | translation+rotation (moderate) | yes (max 1882) | no wind signal (measured) | measured / measured | Strongest translation signal of the older takes (1.08 mm/interval mean). Genuine loop: all 25 end-vs-start pairs match at 1444-1882 inliers. |
 
+### New takes (2026-10-30, Jinming's more-rotation set)
+
+| take | date | duration (s) | color frames | motion class | loop evidence | wind evidence | confidence (loop / wind) | notes |
+|---|---|---|---|---|---|---|---|---|
+| 20261030_174702 | 2026-10-30 | 32.0 | 960 | rotation (high); translation uncertain | no (max 0) | no wind signal (measured) | measured / measured | Longest take in the set (32 s). High rotation throughout; translation proxy 0.588 mm sits above the present bar but stays uncertain under the gravity-leakage rule. |
+| 20261030_174745 | 2026-10-30 | 6.6 | 200 | still; translation uncertain | yes (trivial — camera still) | no wind signal (measured) | measured / measured | Still take (manhole cover on lawn). End-vs-start max 1486 inliers. Proxy 0.235 mm in the uncertain band. |
+| 20261030_174818 | 2026-10-30 | 21.1 | 633 | rotation (high); translation uncertain | no (max 0) | no wind signal (measured) | measured / measured | Strongest rotation of the set (gyro mean 0.44 rad/s, 83% of samples above 0.25). |
+| 20261030_174847 | 2026-10-30 | 16.7 | 501 | rotation (high); translation uncertain | no (max 0) | no wind signal (measured) | measured / measured | Highest gyro mean of the set (0.68 rad/s, 96% above 0.25). |
+| 20261030_174918 | 2026-10-30 | 7.3 | 220 | rotation (high); translation uncertain | no (max 12) | no wind signal (measured) | measured / measured | Short high-rotation take. End-vs-start max 12 inliers, below the bar. |
+
 ## Appendix: measured per-take IMU and stream numbers
 
 All values measured read-only from the .db3 files with one uniform script. Gyro stats use header timestamps. Translation proxy: per color-frame interval, accelerometer demeaned by the take mean, double-integrated from zero velocity (same method as imu_fusion.py step 3); reported in mm per interval.
@@ -178,6 +194,11 @@ All values measured read-only from the .db3 files with one uniform script. Gyro 
 | 20260926_155614 | 160 | 160 | 1069 | 0.03851 | 0.03624 | 0.0724 | 0.0 | 9.7411 | 0.076 | 0.067 | 0.282 |
 | 20261007_075947 | 235 | 235 | 1562 | 0.13056 | 0.10742 | 0.30572 | 0.0832 | 9.7327 | 0.418 | 0.359 | 1.406 |
 | 20261007_080033 | 441 | 440 | 2945 | 0.22608 | 0.15489 | 0.64511 | 0.2706 | 9.7507 | 1.079 | 0.89 | 3.05 |
+| 20261030_174702 | 960 | 960 | 6413 | 0.29517 | 0.27534 | 0.60902 | 0.5731 | 9.7358 | 0.588 | 0.526 | 2.255 |
+| 20261030_174745 | 200 | 201 | 1340 | 0.0633 | 0.05716 | 0.13394 | 0.0052 | 9.752 | 0.235 | 0.198 | 1.139 |
+| 20261030_174818 | 633 | 633 | 4231 | 0.4401 | 0.42173 | 0.81775 | 0.8308 | 9.674 | 1.094 | 1.039 | 3.725 |
+| 20261030_174847 | 501 | 500 | 3346 | 0.67886 | 0.65698 | 1.13636 | 0.9611 | 9.7296 | 1.08 | 0.981 | 3.21 |
+| 20261030_174918 | 220 | 220 | 1461 | 0.54402 | 0.51722 | 1.0313 | 0.8446 | 9.74 | 1.147 | 1.073 | 3.737 |
 
 ## Appendix: per-take wind residuals (rigid-fit, consecutive pairs)
 
@@ -220,6 +241,11 @@ Pooled over all good matches. Control 102631c recomputed here as median 0.185 px
 | 20261026_173628 | 0.386 | 1.188 | non-rigid signal, not separated from parallax |
 | 20261026_173701 | 0.348 | 0.97 | non-rigid signal, not separated from parallax |
 | 20261026_173807 | 0.392 | 1.079 | non-rigid signal, not separated from parallax |
+| 20261030_174702 | 0.195 | 0.456 | no wind signal |
+| 20261030_174745 | 0.18 | 0.443 | no wind signal |
+| 20261030_174818 | 0.208 | 0.493 | no wind signal |
+| 20261030_174847 | 0.225 | 0.531 | no wind signal |
+| 20261030_174918 | 0.209 | 0.505 | no wind signal |
 
 ## What this table does not claim
 
