@@ -71,3 +71,25 @@ rotation all blew up and only the still take (174745) stitched clean.
 | 20261030_174818 | blow-up | 127 / 0 | 896 | 43189 x 30390 | High-rotation take. 0 skipped, median 896 inliers, but the chained canvas diverges. No warp attempted. |
 | 20261030_174847 | blow-up | 101 / 0 | 620 | 64872 x 5776 | High-rotation take (highest gyro mean of the set). Chained canvas diverges. No warp attempted. |
 | 20261030_174918 | blow-up | 44 / 0 | 737 | 14574 x 1470 | High-rotation take. Chained canvas diverges. No warp attempted. |
+
+## Addendum — Nov 6 takes (2026-11-06)
+
+Same method, run 2026-11-06 on the 8 new takes (Jinming's wind
+blowing and illumination change set). All 8 stitched, 0 skipped
+pairs, no blow-ups — the best-behaved batch yet. Median inliers are
+1900-3777, far above the Oct 26 takes, likely because the fallen
+leaves all over the lawn are distinctive features everywhere.
+
+| take | verdict | frames used / skipped | median inliers | canvas (px) | evidence |
+|---|---|---|---|---|---|
+| 20261106_084542 | worked | 72 / 0 | 3160 | 644 x 492 | Still take. Clean sharp single-view map. |
+| 20261106_084741 | worked | 83 / 0 | 2629 | 643 x 483 | Still take. Clean single-view map. |
+| 20261106_084852 | worked | 103 / 0 | 3119 | 642 x 482 | Still take. Clean single-view map. |
+| 20261106_085224 | worked | 105 / 0 | 2095 | 1052 x 914 | Rotation. Coherent fan, leaves line up; thin far-end streak, small. |
+| 20261106_085301 | worked | 87 / 0 | 2777 | 1394 x 957 | Rotation. Coherent fan; mild blur in the densest leaf litter. |
+| 20261106_085422 | worked | 83 / 0 | 2518 | 848 x 694 | Rotation. Coherent map; the moving shadow shows as a diagonal darker band. |
+| 20261106_085453 | sort-of-ok | 79 / 0 | 1900 | 1054 x 860 | Rotation. Coherent fan, but the far end stretches into a thin diagonal streak and there is a brightness seam across the middle. The white sign the camera sweeps past does not appear in the map. |
+| 20261106_085611 | worked | 78 / 0 | 3777 | 642 x 482 | Still take. Clean sharp single-view map. |
+
+New tally for the batch: 7 worked, 1 sort-of-ok, 0 blow-ups. Overall
+across all 48 usable takes: 24 worked, 7 sort-of-ok, 17 blow-ups.
