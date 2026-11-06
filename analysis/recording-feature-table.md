@@ -1,15 +1,19 @@
-# Recording feature table — all 41 takes
+# Recording feature table — all 49 takes
 
-Date: 2026-10-30, extended 2026-11-01. Built for Jinming's Oct 28 ask: comb
+Date: 2026-10-30, extended 2026-11-01 and 2026-11-06. Built for Jinming's Oct 28 ask: comb
 through all the recordings and tabulate what features each one has (wind,
 loop, translation, rotation, translation + rotation, etc.). Loop and wind
-checks run on all 35 usable takes on 2026-10-30 and on the 5 new takes on
-2026-11-01; every cell below is measured except where marked.
+checks run on all 35 usable takes on 2026-10-30, on the 5 new takes on
+2026-11-01, and on the 8 new Nov-06 takes on 2026-11-06 (see
+analysis-drafts/new-takes-20261106/SUMMARY.md for the Nov-06 batch,
+including its new illumination check); every cell below is measured except where marked.
 
-Coverage: 41 .db3 takes from four Box download sessions
-(sess-197710181, sess-1191256009, sess-1861756418, sess-rotation-nov01) —
+Coverage: 49 .db3 takes from five Box download sessions
+(sess-197710181, sess-1191256009, sess-1861756418, sess-rotation-nov01,
+sess-2653029502) —
 21 takes recorded 2026-10-26 (Jinming's loop/wind set), 5 takes recorded
-2026-10-30 (Jinming's "more rotation" set), plus 15 older takes from
+2026-10-30 (Jinming's "more rotation" set), 8 takes recorded 2026-11-06
+(Jinming's "wind blowing and illumination change" set), plus 15 older takes from
 2026-09-26 and 2026-10-07. Every bag was resolved by its exact filename.
 All reads were read-only; no bag was modified, moved, or renamed.
 
@@ -65,22 +69,26 @@ over 3D grass, and no take is labeled as wind.
 
 ## Evidence rules
 
-- Loop measured on all 40 usable takes (end-vs-start, 25 pairs each).
+- Loop measured on all 48 usable takes (end-vs-start, 25 pairs each).
   Genuine loops, camera moved and end overlaps start: 080033 (all 25 pairs at
   1444-1882 inliers), 075947 (all 25 pairs at 133-195 inliers), 155419 (max
   728 inliers on a 1.8 s take, rotation in place). Weak but consistent,
   above the 20-inlier bar across the matrix: 172532 (max 45), 172828
   (max 37), 172859 (max 51). All still takes close trivially — the camera
   never left, so the end overlaps the start with hundreds to thousands of
-  inliers (e.g. 102737a: 2129, 174745: 1486). 173807 is confirmed NO again
+  inliers (e.g. 102737a: 2129, 174745: 1486, 085611: 3731). 173807 is confirmed NO again
   (max 0, all 25 pairs zero), on top of the earlier 4,400-pair tree
   evidence. The four moving Oct-30 takes are all NO (174702, 174818,
-  174847: max 0; 174918: max 12). Every other moving take: NO.
-- Wind measured on all 40 usable takes against the 102631c control. No wind
+  174847: max 0; 174918: max 12). The four moving Nov-06 takes are all NO
+  (085224, 085301, 085422, 085453: max 0, all 25 pairs zero). Every other moving take: NO.
+- Wind measured on all 48 usable takes against the 102631c control. No wind
   signal: 102608b, 102631c, 102706d, 102737a, 153136, 153610, 153825, 155411,
   075947, 080033, 172532, 172644, 172739, 173045, 173403, 174702, 174745,
   174818, 174847, 174918 (the Oct-30 takes all sit at control level:
-  pooled medians 0.180-0.225 px). Uncertain: 155419,
+  pooled medians 0.180-0.225 px), 084542, 084741, 084852, 085224, 085301,
+  085422, 085453, 085611 (the Nov-06 takes all sit at or below control
+  level: pooled medians 0.093-0.181 px, the four still takes the cleanest
+  in the dataset so far at 0.093-0.108 px). Uncertain: 155419,
   155430, 155507, 155555, 155614, 172828, 173507. Non-rigid signal, not
   separated from parallax: 172859, 172912, 172955, 173017, 173124, 173154,
   173220, 173250, 173540, 173603, 173628, 173701, 173807.
@@ -142,6 +150,19 @@ over 3D grass, and no take is labeled as wind.
 | 20261007_075947 | 2026-10-07 | 7.8 | 235 | translation+rotation (gentle) | yes (max 195) | no wind signal (measured) | measured / measured | End-vs-start: all 25 pairs at 133-195 inliers — loop. |
 | 20261007_080033 | 2026-10-07 | 14.7 | 441 | translation+rotation (moderate) | yes (max 1882) | no wind signal (measured) | measured / measured | Strongest translation signal of the older takes (1.08 mm/interval mean). Genuine loop: all 25 end-vs-start pairs match at 1444-1882 inliers. |
 
+### New takes (2026-11-06, Jinming's wind-blowing and illumination-change set)
+
+| take | date | duration (s) | color frames | motion class | loop evidence | wind evidence | confidence (loop / wind) | notes |
+|---|---|---|---|---|---|---|---|---|
+| 20261106_084542 | 2026-11-06 | 11.8 | 356 | still | yes (trivial — camera still) | no wind signal (measured) | measured / measured | Still take, grass with fallen leaves. Brightness range 8.54, max jump 1.01 (mild slow drift). Frame differences show intermittent camera micro-shake (uniform ~1 px translation field, two episodes), not grass motion. |
+| 20261106_084741 | 2026-11-06 | 13.8 | 415 | still | yes (trivial — camera still) | no wind signal (measured) | measured / measured | Still take. Brightness range 8.59, max jump 1.72. A moving shadow sweeps across the lawn mid-take (localized pixel change, no feature motion). |
+| 20261106_084852 | 2026-11-06 | 17.1 | 513 | still | yes (trivial — camera still) | no wind signal (measured) | measured / measured | Still take, leaf-covered lawn. Brightness range 8.05, max jump 0.97. One illumination event near pair 310 (shadow; SIFT feature count halves during it, no feature motion). |
+| 20261106_085224 | 2026-11-06 | 17.5 | 524 | rotation (high); translation uncertain | no (max 0) | no wind signal (measured) | measured / measured | Brightness range 33.89 (smooth rise 115 to 140, mostly the view changing as the camera rotates over different ground). |
+| 20261106_085301 | 2026-11-06 | 14.4 | 432 | rotation (high); translation uncertain | no (max 0) | no wind signal (measured) | measured / measured | Largest brightness swing in the batch (range 66.21): flat near 118 for 6 s, then a smooth wave to 167 by the end as the camera rotates from shaded leaf litter into a sunlit patch. |
+| 20261106_085422 | 2026-11-06 | 13.7 | 411 | rotation (moderate); translation uncertain | no (max 0) | no wind signal (measured) | measured / measured | Brightness range 20.45, wobbly with a moving shadow band (visible as a diagonal darker band in its panorama). |
+| 20261106_085453 | 2026-11-06 | 13.1 | 393 | rotation (high); translation uncertain | no (max 0) | no wind signal (measured) | measured / measured | Brightness range 39.30; the one sharp 10.14 jump is a white sign entering the view as the camera rotates past it, not a light change. People's shadows visible in frames. |
+| 20261106_085611 | 2026-11-06 | 12.8 | 386 | still | yes (trivial — camera still) | no wind signal (measured) | measured / measured | Still take. Cleanest genuine illumination change in the batch: brightness oscillates repeatedly between about 90 and 114 (range 23.31) on a fixed view of grass and leaves. No pixel-motion event anywhere in the take. |
+
 ### New takes (2026-10-30, Jinming's more-rotation set)
 
 | take | date | duration (s) | color frames | motion class | loop evidence | wind evidence | confidence (loop / wind) | notes |
@@ -199,6 +220,14 @@ All values measured read-only from the .db3 files with one uniform script. Gyro 
 | 20261030_174818 | 633 | 633 | 4231 | 0.4401 | 0.42173 | 0.81775 | 0.8308 | 9.674 | 1.094 | 1.039 | 3.725 |
 | 20261030_174847 | 501 | 500 | 3346 | 0.67886 | 0.65698 | 1.13636 | 0.9611 | 9.7296 | 1.08 | 0.981 | 3.21 |
 | 20261030_174918 | 220 | 220 | 1461 | 0.54402 | 0.51722 | 1.0313 | 0.8446 | 9.74 | 1.147 | 1.073 | 3.737 |
+| 20261106_084542 | 356 | 355 | 2376 | 0.01469 | 0.01083 | 0.03139 | 0.0029 | 9.7342 | 0.092 | 0.071 | 0.829 |
+| 20261106_084741 | 415 | 415 | 2776 | 0.00699 | 0.00614 | 0.01401 | 0.0 | 9.7517 | 0.024 | 0.012 | 0.308 |
+| 20261106_084852 | 513 | 513 | 3431 | 0.00593 | 0.00568 | 0.0104 | 0.0 | 9.76 | 0.009 | 0.008 | 0.089 |
+| 20261106_085224 | 524 | 524 | 3504 | 0.28184 | 0.23529 | 0.68006 | 0.4795 | 9.7235 | 0.676 | 0.654 | 1.957 |
+| 20261106_085301 | 432 | 432 | 2888 | 0.26592 | 0.26363 | 0.51598 | 0.5447 | 9.709 | 0.736 | 0.7 | 1.874 |
+| 20261106_085422 | 411 | 411 | 2745 | 0.1878 | 0.17155 | 0.39818 | 0.2321 | 9.728 | 0.46 | 0.415 | 1.368 |
+| 20261106_085453 | 393 | 393 | 2629 | 0.28538 | 0.22999 | 0.64046 | 0.4568 | 9.7179 | 0.643 | 0.585 | 1.833 |
+| 20261106_085611 | 386 | 387 | 2584 | 0.00592 | 0.00576 | 0.01036 | 0.0 | 9.7412 | 0.007 | 0.005 | 0.115 |
 
 ## Appendix: per-take wind residuals (rigid-fit, consecutive pairs)
 
@@ -246,6 +275,14 @@ Pooled over all good matches. Control 102631c recomputed here as median 0.185 px
 | 20261030_174818 | 0.208 | 0.493 | no wind signal |
 | 20261030_174847 | 0.225 | 0.531 | no wind signal |
 | 20261030_174918 | 0.209 | 0.505 | no wind signal |
+| 20261106_084542 | 0.108 | 0.312 | no wind signal |
+| 20261106_084741 | 0.108 | 0.308 | no wind signal |
+| 20261106_084852 | 0.097 | 0.279 | no wind signal |
+| 20261106_085224 | 0.181 | 0.461 | no wind signal |
+| 20261106_085301 | 0.18 | 0.484 | no wind signal |
+| 20261106_085422 | 0.171 | 0.423 | no wind signal |
+| 20261106_085453 | 0.176 | 0.431 | no wind signal |
+| 20261106_085611 | 0.093 | 0.266 | no wind signal |
 
 ## What this table does not claim
 
