@@ -1,0 +1,85 @@
+%YAML:1.0
+
+# ORB-SLAM3 settings for the GrassVIO RealSense D455F recordings.
+# Intrinsics and extrinsics read from the bag's own camera_info / tf
+# topics (take 080033); IMU noise densities from the Bosch BMI085
+# product flyer (typical values). See SUMMARY.md for sources.
+
+File.version: "1.0"
+
+Camera.type: "PinHole"
+
+# Depth-camera intrinsics (depth frame is the reference frame here;
+# the depth map is used as-is, unaligned to the color frame, matching
+# the project's earlier RGB-D VO which also used these values).
+Camera1.fx: 386.009827
+Camera1.fy: 386.009827
+Camera1.cx: 320.77182
+Camera1.cy: 240.889587
+
+# Depth distortion coefficients are all zero in the bag.
+Camera1.k1: 0.0
+Camera1.k2: 0.0
+Camera1.p1: 0.0
+Camera1.p2: 0.0
+
+Camera.width: 640
+Camera.height: 480
+Camera.fps: 30
+
+# PNGs on disk are BGR (written by OpenCV).
+Camera.RGB: 0
+
+Stereo.ThDepth: 40.0
+Stereo.b: 0.095
+
+# Depth map values factor: raw depth units are 0.001 m.
+RGBD.DepthMapFactor: 1000.0
+
+# Transformation from body frame (IMU) to depth camera, from the bag's
+# Gyro tf topic: rotation identity, translation (-0.030220, 0.007400,
+# 0.016020) m (IMU origin expressed in the depth frame).
+IMU.T_b_c1: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: f
+   data: [1.0, 0.0, 0.0, -0.030220,
+          0.0, 1.0, 0.0, 0.007400,
+          0.0, 0.0, 1.0, 0.016020,
+          0.0, 0.0, 0.0, 1.0]
+
+IMU.InsertKFsWhenLost: 0
+
+# IMU noise, Bosch BMI085 typical values:
+#   gyro 0.014 deg/s/sqrt(Hz) = 2.44e-4 rad/s/sqrt(Hz)
+#   accel 120 ug/sqrt(Hz) = 1.18e-3 m/s^2/sqrt(Hz)
+#   gyro bias instability < 2 deg/h -> GyroWalk 1e-5 (assumed)
+#   AccWalk 1e-4 (assumed; no datasheet value)
+IMU.NoiseGyro: 2.44e-4
+IMU.NoiseAcc: 1.18e-3
+IMU.GyroWalk: 1e-5
+IMU.AccWalk: 1e-4
+IMU.Frequency: 200.0
+
+#--------------------------------------------------------------------------------------------
+# ORB Parameters (stock RealSense_D435i.yaml values)
+#--------------------------------------------------------------------------------------------
+ORBextractor.nFeatures: 1250
+ORBextractor.scaleFactor: 1.2
+ORBextractor.nLevels: 8
+ORBextractor.iniThFAST: 20
+ORBextractor.minThFAST: 7
+
+#--------------------------------------------------------------------------------------------
+# Viewer Parameters (viewer is disabled; kept for completeness)
+#--------------------------------------------------------------------------------------------
+Viewer.KeyFrameSize: 0.05
+Viewer.KeyFrameLineWidth: 1.0
+Viewer.GraphLineWidth: 0.9
+Viewer.PointSize: 2.0
+Viewer.CameraSize: 0.08
+Viewer.CameraLineWidth: 3.0
+Viewer.ViewpointX: 0.0
+Viewer.ViewpointY: -0.7
+Viewer.ViewpointZ: -3.5
+Viewer.ViewpointF: 500.0
