@@ -17,6 +17,47 @@ sess-2653029502) —
 2026-09-26 and 2026-10-07. Every bag was resolved by its exact filename.
 All reads were read-only; no bag was modified, moved, or renamed.
 
+## Correction (2026-11-09): translation-proxy column
+
+The translation-proxy mean, median, and max in the IMU appendix were
+wrong for the 36 takes recorded 2026-09-26, 2026-10-07, and 2026-10-26.
+They were computed with an earlier integration variant (explicit Euler
+over the accel samples inside each frame interval, each with its full
+gap-to-next-sample dt), which reproduces the published values to within
+a few percent on 35 of the 36 rows, and came out about half the values the stated
+method gives. The stated method is semi-implicit Euler with
+interval-clipped dt, the same as imu_fusion.py step 3; the script was
+changed to that method for the 2026-11-01 extension and the old rows
+were never recomputed. Recomputing all 49 takes with the stated method
+reproduces the 13 newer rows (2026-10-30 and 2026-11-06) exactly and
+gives the corrected values now in the appendix. Two headline rows:
+173701 mean 0.132 mm becomes 0.236 mm (median 0.109 becomes 0.217,
+max 0.579 becomes 0.729); the control 102631c mean 0.084 mm becomes
+0.142 mm (median 0.074 becomes 0.128, max 0.277 becomes 0.326). The
+corrected values agree exactly with imu_fusion.py's own displacement
+numbers on the four September takes it supports (0.121, 0.142, 0.169,
+0.397 mm). One row, 102608b (published 0.020/0.007/0.284 mm), matches
+neither the old variant nor the stated method; its corrected values
+(0.121/0.110/0.336 mm) are the recomputed ones and the original error
+there is unexplained.
+
+Wind and loop verdicts are unaffected: the wind verdicts rest on
+rigid-fit residuals against the control, and the loop verdicts rest on
+SIFT end-vs-start inliers; neither uses the proxy column. The
+still-take noise floor in the Methods text is corrected from about
+0.1-0.15 mm to about 0.1-0.25 mm per interval.
+
+What does change: 12 takes cross a translation band under the
+corrected means. Motion-class labels were left as published and need
+a re-check against the corrected bands: 172859 (0.353 mm, now
+uncertain, labeled rotation-only), 172912, 172955, 173250, 173507
+(0.429-0.543 mm, now above the 0.4 mm present bar, labeled
+uncertain), and 155419 (0.419 mm, labeled uncertain). The three
+high-rotation takes that cross 0.4 mm (172644, 172739, 173045) stay
+uncertain under the gravity-leakage rule. 153825 and 173701 cross
+from negligible to uncertain but carry no translation verdict in
+their motion class.
+
 ## Methods
 
 Per-take stream stats were computed with one uniform script over all 41 bags:
@@ -41,13 +82,13 @@ the four September takes imu_fusion.py itself supports, its per-interval noise
 estimates are 0.098-0.336 mm and its displacement numbers agree with this
 proxy to the same order of magnitude (both at the noise floor for still
 takes). Translation is labeled "present" when the proxy mean is at or
-above 0.4 mm (about 3x the still-take noise floor of ~0.1-0.15 mm) and the
+above 0.4 mm (about 2-4x the still-take noise floor of ~0.1-0.25 mm) and the
 signal clearly exceeds the gravity leakage plausible at that rotation level;
 on high-rotation takes the leakage can be large, so those stay "uncertain"
 regardless of the number. 0.2-0.4 mm is "uncertain"; below 0.2 mm is
 "negligible". The 0.2 mm line is
-arbitrary: 172859 (0.197 mm, negligible) and 173017 (0.200 mm, uncertain) are
-effectively the same measurement on opposite sides of it.
+arbitrary: under the corrected values 172859 (0.353 mm) and 173017 (0.366 mm)
+sit together in the uncertain band, 0.013 mm apart.
 
 Loop check (all 40 usable takes): SIFT-match the last 5 stride-5 chosen frames
 against the first 5 (25 pairs; Lowe 0.75, RANSAC 3.0 px — the stitch script's
@@ -137,7 +178,7 @@ over 3D grass, and no take is labeled as wind.
 | 20260926_102608b | 2026-09-26 | 5.7 | 173 | still | yes (trivial — camera still) | no wind (Jinming Oct 9; measured at control level) | measured / reported (Jinming Oct 9) + measured |  |
 | 20260926_102631c | 2026-09-26 | 4.1 | 124 | still | yes (trivial — camera still) | no wind (Jinming Oct 9; measured at control level) | measured / reported (Jinming Oct 9) + measured |  |
 | 20260926_102706d | 2026-09-26 | 4.6 | 138 | still | yes (trivial — camera still) | no wind (Jinming Oct 9; measured at control level) | measured / reported (Jinming Oct 9) + measured |  |
-| 20260926_102737a | 2026-09-26 | 3.9 | 117 | still; translation uncertain | yes (trivial — camera still) | no wind (Jinming Oct 9; measured at control level) | measured / reported (Jinming Oct 9) + measured | Noisier IMU than the other Sept takes (imu_fusion.py per-interval noise 0.336 mm); proxy 0.219 mm sits in the uncertain band. |
+| 20260926_102737a | 2026-09-26 | 3.9 | 117 | still; translation uncertain | yes (trivial — camera still) | no wind (Jinming Oct 9; measured at control level) | measured / reported (Jinming Oct 9) + measured | Noisier IMU than the other Sept takes (imu_fusion.py per-interval noise 0.336 mm); proxy 0.397 mm sits in the uncertain band. |
 | 20260926_153136 | 2026-09-26 | 3.2 | 96 | still | yes (trivial — camera still) | no wind signal (measured) | measured / measured |  |
 | 20260926_153610 | 2026-09-26 | 4.2 | 128 | still | yes (trivial — camera still) | no wind signal (measured) | measured / measured |  |
 | 20260926_153825 | 2026-09-26 | 6.5 | 196 | still | yes (trivial — camera still) | no wind signal (measured) | measured / measured |  |
@@ -148,7 +189,7 @@ over 3D grass, and no take is labeled as wind.
 | 20260926_155555 | 2026-09-26 | 10.1 | 305 | still | yes (trivial — camera still) | uncertain (measured) | measured / measured |  |
 | 20260926_155614 | 2026-09-26 | 5.3 | 160 | still | yes (trivial — camera still) | uncertain (measured) | measured / measured |  |
 | 20261007_075947 | 2026-10-07 | 7.8 | 235 | translation+rotation (gentle) | yes (max 195) | no wind signal (measured) | measured / measured | End-vs-start: all 25 pairs at 133-195 inliers — loop. |
-| 20261007_080033 | 2026-10-07 | 14.7 | 441 | translation+rotation (moderate) | yes (max 1882) | no wind signal (measured) | measured / measured | Strongest translation signal of the older takes (1.08 mm/interval mean). Genuine loop: all 25 end-vs-start pairs match at 1444-1882 inliers. |
+| 20261007_080033 | 2026-10-07 | 14.7 | 441 | translation+rotation (moderate) | yes (max 1882) | no wind signal (measured) | measured / measured | Strongest translation signal of the older takes (2.01 mm/interval mean). Genuine loop: all 25 end-vs-start pairs match at 1444-1882 inliers. |
 
 ### New takes (2026-11-06, Jinming's wind-blowing and illumination-change set)
 
@@ -179,42 +220,42 @@ All values measured read-only from the .db3 files with one uniform script. Gyro 
 
 | take | color n | depth n | gyro n | gyro mean (rad/s) | gyro median (rad/s) | gyro p95 (rad/s) | frac > 0.25 rad/s | accel mean (m/s^2) | transl. proxy mean (mm) | transl. proxy median (mm) | transl. proxy max (mm) |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 20261026_172532 | 1058 | 1058 | 7020 | 0.24719 | 0.2557 | 0.48831 | 0.512 | 9.7614 | 0.461 | 0.392 | 2.063 |
-| 20261026_172642 | 6 | 6 | 39 | 0.07212 | 0.06209 | 0.12516 | 0.0 | 9.8908 | 0.134 | 0.129 | 0.228 |
-| 20261026_172644 | 698 | 698 | 4670 | 0.33976 | 0.3375 | 0.55399 | 0.7647 | 9.7747 | 0.329 | 0.27 | 1.535 |
-| 20261026_172739 | 649 | 649 | 4336 | 0.31723 | 0.30986 | 0.51304 | 0.6797 | 9.7813 | 0.339 | 0.281 | 1.379 |
-| 20261026_172828 | 642 | 642 | 4291 | 0.38252 | 0.37489 | 0.6547 | 0.7833 | 9.8011 | 0.446 | 0.373 | 1.666 |
-| 20261026_172859 | 163 | 163 | 1094 | 0.11987 | 0.10846 | 0.24608 | 0.043 | 9.7327 | 0.197 | 0.17 | 0.662 |
-| 20261026_172912 | 390 | 390 | 2611 | 0.15684 | 0.14408 | 0.29983 | 0.1306 | 9.7591 | 0.232 | 0.196 | 0.732 |
-| 20261026_172955 | 347 | 348 | 2323 | 0.14602 | 0.11787 | 0.39435 | 0.1386 | 9.764 | 0.233 | 0.191 | 0.929 |
-| 20261026_173017 | 276 | 276 | 1836 | 0.12963 | 0.11975 | 0.23691 | 0.0349 | 9.7703 | 0.2 | 0.169 | 0.694 |
-| 20261026_173045 | 795 | 795 | 5313 | 0.3233 | 0.32204 | 0.54848 | 0.7237 | 9.7821 | 0.389 | 0.328 | 1.534 |
-| 20261026_173124 | 590 | 590 | 3945 | 0.16815 | 0.14019 | 0.35793 | 0.1947 | 9.7625 | 0.545 | 0.435 | 2.045 |
-| 20261026_173154 | 419 | 419 | 2802 | 0.2059 | 0.18057 | 0.45693 | 0.3055 | 9.7393 | 0.565 | 0.48 | 1.891 |
-| 20261026_173220 | 562 | 562 | 3758 | 0.17651 | 0.14721 | 0.4553 | 0.1772 | 9.7465 | 0.674 | 0.559 | 2.254 |
-| 20261026_173250 | 287 | 287 | 1920 | 0.11825 | 0.09676 | 0.28542 | 0.0823 | 9.7549 | 0.253 | 0.206 | 0.794 |
-| 20261026_173403 | 194 | 194 | 1298 | 0.12844 | 0.08422 | 0.32473 | 0.2042 | 9.7359 | 0.206 | 0.178 | 0.707 |
-| 20261026_173507 | 305 | 305 | 2038 | 0.13175 | 0.11615 | 0.27003 | 0.0903 | 9.7538 | 0.299 | 0.24 | 1.082 |
-| 20261026_173540 | 482 | 482 | 3221 | 0.1299 | 0.12794 | 0.23855 | 0.0444 | 9.6986 | 0.522 | 0.421 | 1.838 |
-| 20261026_173603 | 428 | 428 | 2862 | 0.11577 | 0.10273 | 0.2551 | 0.0563 | 9.6914 | 0.43 | 0.369 | 1.232 |
-| 20261026_173628 | 348 | 348 | 2331 | 0.1119 | 0.10568 | 0.24164 | 0.0455 | 9.7 | 0.46 | 0.36 | 2.097 |
-| 20261026_173701 | 254 | 254 | 1701 | 0.06317 | 0.05491 | 0.12515 | 0.0 | 9.7094 | 0.132 | 0.109 | 0.579 |
-| 20261026_173807 | 979 | 979 | 6549 | 0.1076 | 0.09393 | 0.23594 | 0.0351 | 9.7044 | 0.57 | 0.497 | 1.739 |
-| 20260926_102608b | 173 | 173 | 1157 | 0.03407 | 0.0306 | 0.06866 | 0.0 | 9.7401 | 0.02 | 0.007 | 0.284 |
-| 20260926_102631c | 124 | 124 | 828 | 0.05026 | 0.04891 | 0.08934 | 0.0 | 9.7454 | 0.084 | 0.074 | 0.277 |
-| 20260926_102706d | 138 | 138 | 919 | 0.07227 | 0.05409 | 0.18742 | 0.0239 | 9.7365 | 0.096 | 0.08 | 0.305 |
-| 20260926_102737a | 117 | 118 | 777 | 0.0727 | 0.04787 | 0.20422 | 0.0373 | 9.7345 | 0.219 | 0.179 | 1.007 |
-| 20260926_153136 | 96 | 96 | 634 | 0.03902 | 0.02996 | 0.10877 | 0.0 | 9.7472 | 0.067 | 0.051 | 0.328 |
-| 20260926_153610 | 128 | 128 | 843 | 0.03308 | 0.03058 | 0.06633 | 0.0 | 9.7429 | 0.053 | 0.043 | 0.17 |
-| 20260926_153825 | 196 | 196 | 1309 | 0.05826 | 0.04891 | 0.13316 | 0.0015 | 9.744 | 0.126 | 0.106 | 0.408 |
-| 20260926_155411 | 176 | 177 | 1179 | 0.05096 | 0.04528 | 0.10381 | 0.0 | 9.7499 | 0.076 | 0.059 | 0.258 |
-| 20260926_155419 | 55 | 54 | 363 | 0.22381 | 0.21863 | 0.32375 | 0.2066 | 9.7824 | 0.228 | 0.208 | 0.521 |
-| 20260926_155430 | 150 | 150 | 1003 | 0.06125 | 0.04829 | 0.1399 | 0.009 | 9.7421 | 0.068 | 0.05 | 0.387 |
-| 20260926_155507 | 210 | 210 | 1403 | 0.03592 | 0.03337 | 0.06778 | 0.0 | 9.7546 | 0.069 | 0.057 | 0.226 |
-| 20260926_155555 | 305 | 305 | 2036 | 0.03971 | 0.03535 | 0.08199 | 0.0 | 9.7422 | 0.068 | 0.057 | 0.339 |
-| 20260926_155614 | 160 | 160 | 1069 | 0.03851 | 0.03624 | 0.0724 | 0.0 | 9.7411 | 0.076 | 0.067 | 0.282 |
-| 20261007_075947 | 235 | 235 | 1562 | 0.13056 | 0.10742 | 0.30572 | 0.0832 | 9.7327 | 0.418 | 0.359 | 1.406 |
-| 20261007_080033 | 441 | 440 | 2945 | 0.22608 | 0.15489 | 0.64511 | 0.2706 | 9.7507 | 1.079 | 0.89 | 3.05 |
+| 20261026_172532 | 1058 | 1058 | 7020 | 0.24719 | 0.2557 | 0.48831 | 0.512 | 9.7614 | 0.84 | 0.807 | 2.612 |
+| 20261026_172642 | 6 | 6 | 39 | 0.07212 | 0.06209 | 0.12516 | 0.0 | 9.8908 | 0.219 | 0.159 | 0.364 |
+| 20261026_172644 | 698 | 698 | 4670 | 0.33976 | 0.3375 | 0.55399 | 0.7647 | 9.7747 | 0.588 | 0.555 | 2.016 |
+| 20261026_172739 | 649 | 649 | 4336 | 0.31723 | 0.30986 | 0.51304 | 0.6797 | 9.7813 | 0.606 | 0.573 | 1.704 |
+| 20261026_172828 | 642 | 642 | 4291 | 0.38252 | 0.37489 | 0.6547 | 0.7833 | 9.8011 | 0.813 | 0.781 | 2.855 |
+| 20261026_172859 | 163 | 163 | 1094 | 0.11987 | 0.10846 | 0.24608 | 0.043 | 9.7327 | 0.353 | 0.317 | 1.549 |
+| 20261026_172912 | 390 | 390 | 2611 | 0.15684 | 0.14408 | 0.29983 | 0.1306 | 9.7591 | 0.429 | 0.421 | 0.949 |
+| 20261026_172955 | 347 | 348 | 2323 | 0.14602 | 0.11787 | 0.39435 | 0.1386 | 9.764 | 0.43 | 0.405 | 1.934 |
+| 20261026_173017 | 276 | 276 | 1836 | 0.12963 | 0.11975 | 0.23691 | 0.0349 | 9.7703 | 0.366 | 0.326 | 1.363 |
+| 20261026_173045 | 795 | 795 | 5313 | 0.3233 | 0.32204 | 0.54848 | 0.7237 | 9.7821 | 0.712 | 0.674 | 1.887 |
+| 20261026_173124 | 590 | 590 | 3945 | 0.16815 | 0.14019 | 0.35793 | 0.1947 | 9.7625 | 1.002 | 0.851 | 2.474 |
+| 20261026_173154 | 419 | 419 | 2802 | 0.2059 | 0.18057 | 0.45693 | 0.3055 | 9.7393 | 1.039 | 1.029 | 2.273 |
+| 20261026_173220 | 562 | 562 | 3758 | 0.17651 | 0.14721 | 0.4553 | 0.1772 | 9.7465 | 1.251 | 1.315 | 2.625 |
+| 20261026_173250 | 287 | 287 | 1920 | 0.11825 | 0.09676 | 0.28542 | 0.0823 | 9.7549 | 0.46 | 0.443 | 1.011 |
+| 20261026_173403 | 194 | 194 | 1298 | 0.12844 | 0.08422 | 0.32473 | 0.2042 | 9.7359 | 0.377 | 0.376 | 0.852 |
+| 20261026_173507 | 305 | 305 | 2038 | 0.13175 | 0.11615 | 0.27003 | 0.0903 | 9.7538 | 0.543 | 0.496 | 1.536 |
+| 20261026_173540 | 482 | 482 | 3221 | 0.1299 | 0.12794 | 0.23855 | 0.0444 | 9.6986 | 0.96 | 0.866 | 2.385 |
+| 20261026_173603 | 428 | 428 | 2862 | 0.11577 | 0.10273 | 0.2551 | 0.0563 | 9.6914 | 0.785 | 0.777 | 1.681 |
+| 20261026_173628 | 348 | 348 | 2331 | 0.1119 | 0.10568 | 0.24164 | 0.0455 | 9.7 | 0.848 | 0.737 | 2.315 |
+| 20261026_173701 | 254 | 254 | 1701 | 0.06317 | 0.05491 | 0.12515 | 0.0 | 9.7094 | 0.236 | 0.217 | 0.729 |
+| 20261026_173807 | 979 | 979 | 6549 | 0.1076 | 0.09393 | 0.23594 | 0.0351 | 9.7044 | 1.055 | 1.066 | 2.156 |
+| 20260926_102608b | 173 | 173 | 1157 | 0.03407 | 0.0306 | 0.06866 | 0.0 | 9.7401 | 0.121 | 0.11 | 0.336 |
+| 20260926_102631c | 124 | 124 | 828 | 0.05026 | 0.04891 | 0.08934 | 0.0 | 9.7454 | 0.142 | 0.128 | 0.326 |
+| 20260926_102706d | 138 | 138 | 919 | 0.07227 | 0.05409 | 0.18742 | 0.0239 | 9.7365 | 0.169 | 0.159 | 0.378 |
+| 20260926_102737a | 117 | 118 | 777 | 0.0727 | 0.04787 | 0.20422 | 0.0373 | 9.7345 | 0.397 | 0.374 | 1.234 |
+| 20260926_153136 | 96 | 96 | 634 | 0.03902 | 0.02996 | 0.10877 | 0.0 | 9.7472 | 0.109 | 0.094 | 0.378 |
+| 20260926_153610 | 128 | 128 | 843 | 0.03308 | 0.03058 | 0.06633 | 0.0 | 9.7429 | 0.095 | 0.092 | 0.243 |
+| 20260926_153825 | 196 | 196 | 1309 | 0.05826 | 0.04891 | 0.13316 | 0.0015 | 9.744 | 0.228 | 0.199 | 0.57 |
+| 20260926_155411 | 176 | 177 | 1179 | 0.05096 | 0.04528 | 0.10381 | 0.0 | 9.7499 | 0.136 | 0.128 | 0.331 |
+| 20260926_155419 | 55 | 54 | 363 | 0.22381 | 0.21863 | 0.32375 | 0.2066 | 9.7824 | 0.419 | 0.355 | 0.846 |
+| 20260926_155430 | 150 | 150 | 1003 | 0.06125 | 0.04829 | 0.1399 | 0.009 | 9.7421 | 0.119 | 0.104 | 0.46 |
+| 20260926_155507 | 210 | 210 | 1403 | 0.03592 | 0.03337 | 0.06778 | 0.0 | 9.7546 | 0.122 | 0.118 | 0.301 |
+| 20260926_155555 | 305 | 305 | 2036 | 0.03971 | 0.03535 | 0.08199 | 0.0 | 9.7422 | 0.118 | 0.107 | 0.442 |
+| 20260926_155614 | 160 | 160 | 1069 | 0.03851 | 0.03624 | 0.0724 | 0.0 | 9.7411 | 0.134 | 0.131 | 0.335 |
+| 20261007_075947 | 235 | 235 | 1562 | 0.13056 | 0.10742 | 0.30572 | 0.0832 | 9.7327 | 0.764 | 0.769 | 1.775 |
+| 20261007_080033 | 441 | 440 | 2945 | 0.22608 | 0.15489 | 0.64511 | 0.2706 | 9.7507 | 2.01 | 1.999 | 3.861 |
 | 20261030_174702 | 960 | 960 | 6413 | 0.29517 | 0.27534 | 0.60902 | 0.5731 | 9.7358 | 0.588 | 0.526 | 2.255 |
 | 20261030_174745 | 200 | 201 | 1340 | 0.0633 | 0.05716 | 0.13394 | 0.0052 | 9.752 | 0.235 | 0.198 | 1.139 |
 | 20261030_174818 | 633 | 633 | 4231 | 0.4401 | 0.42173 | 0.81775 | 0.8308 | 9.674 | 1.094 | 1.039 | 3.725 |
