@@ -159,9 +159,10 @@ def fit_homography(src, dst, normalize=True):
         T_dst = hartley_transform(dst.reshape(-1, 2))
         q_src = apply_transform(T_src, src.reshape(-1, 2))
         q_dst = apply_transform(T_dst, dst.reshape(-1, 2))
+        # Threshold is in normalized units: 3 px times the dst scale.
         Hn, mask = cv2.findHomography(q_src.reshape(-1, 1, 2),
                                       q_dst.reshape(-1, 1, 2),
-                                      cv2.RANSAC, RANSAC_THRESH_PX)
+                                      cv2.RANSAC, RANSAC_THRESH_PX * T_dst[0, 0])
         if Hn is None or mask is None:
             return None, None
         return np.linalg.inv(T_dst) @ Hn @ T_src, mask
