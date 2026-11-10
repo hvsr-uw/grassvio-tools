@@ -113,6 +113,19 @@ Consequences, stated carefully:
   task only measures; the fix is a one-line change for the owner
   of `stitch_map.py` to approve.
 
+## Fix applied (Nov 10, after this measurement)
+
+Harsh approved the one-line fix. `fit_homography` in
+`stitch_map.py` now passes `RANSAC_THRESH_PX * T_dst[0, 0]` as the
+threshold on normalized points. Verified after the fix by re-running
+`inlier_rate.py` on the control take and the noisiest take:
+normalized median rate now equals the direct median exactly
+(102631c 0.999 = 0.999; 173250 0.698 = 0.698). Regression check on
+the 102631c stitch: the normalized map is now 672x507 (it was
+676x502 with the broken threshold) and agrees with the direct map
+to within 1 gray level on 0.01% of pixels. The direct path is
+untouched by the fix.
+
 ## Re-running
 
 ```
