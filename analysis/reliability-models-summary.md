@@ -95,6 +95,16 @@ The 173701 reliability histogram is bimodal: a large peak near 0 and
 a large peak near 1 (see 173701_hist.png). The feature population
 splits into two groups, which is what a reliability score is for.
 
+One caveat on the headline number. The 47 percent depends on the
+likelihood choice. Re-running the same tracks with a Rayleigh
+likelihood instead of the half-normal moves 173701 to 64 percent or
+26 percent depending on how the scale is set, while the ordering
+stays the same, 173701 far below both controls, and the curve shape
+holds. The 25 frame window is 0.834 seconds, and the verdict comes
+about 0.83 seconds late but does not look ahead past the window.
+The 0.8 threshold has no recorded justification, it is a chosen
+headline value, and the gap stays about the same at 0.7 and 0.9.
+
 ## Does the HMM add anything over a plain threshold?
 
 Partly. A plain rule (median residual under 0.5 px) gives 0.926 /
