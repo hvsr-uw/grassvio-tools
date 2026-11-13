@@ -130,7 +130,7 @@ the combined correction test ran on withheld motion and failed all 3 pre-set cri
 
 the supported imu result is the gyro rotation prior. we have not shown a useful imu translation prior on these takes.
 
-the 6 deg gravity error is from the preintegration test. the fitted gravity direction in the init test is stable to about 0.5 deg across fits. that is stability, not independently verified gravity accuracy. those are different tests, not one number. the fitted accel bias z value sits near +0.31 to +0.33 m/s2 on every window, but we have not shown that is a physical sensor offset. our zero-centered 0.05 m/s2 prior was not grounded in measured bias statistics for this device. we need independent calibration to justify its mean and uncertainty.
+the 6 deg gravity error is from the preintegration test. the fitted gravity direction in the init test is stable to about 0.5 deg across fits. that is stability, not independently verified gravity accuracy. those are different tests, not one number. the fitted accel bias z stays positive on every window, +0.21 to +0.33 m/s2 on 080033 and +0.31 to +0.33 on 075947, but we have not shown that is a physical sensor offset. our zero-centered 0.05 m/s2 prior was not grounded in measured bias statistics for this device. we need independent calibration to justify its mean and uncertainty.
 
 3. findings
 
