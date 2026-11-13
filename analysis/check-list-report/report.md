@@ -48,9 +48,17 @@ jitter means how much the estimated translation moves frame to frame in the sens
 
 2.3 loop closing test
 
-genuine loops are 080033, 075947 and 155419. the table shows the max inlier count over 25 end against start pairs, plus the end error from each method. a take can clear the overlap bar without being a loop, 172532 and 172828 do that.
+we checked endpoint overlap by matching 5 sampled frames near the end of each take against 5 near the start. that gives 25 image pairs per take. we report the max sift inlier count across those pairs, with 20 inliers as the candidate overlap bar.
 
-| take | orbslam3 | our vo | loop |
+080033 has strong endpoint overlap on all 25 pairs, 1444 to 1882 inliers. 075947 runs 133 to 195 across all 25 pairs. 155419 reaches 728.
+
+the bar also accepts the weaker takes 172532, 172828 and 172859, whose max counts are 45, 37 and 51. so this bar alone does not separate the takes we call loops from the weaker recordings. it flags possible endpoint overlap.
+
+173807, 174702 and 174818 have zero endpoint inliers. we did not find endpoint overlap on those takes, but failed matching alone does not prove the camera never returned to its starting area. the mid-take crossing on 174702 is a separate observation from endpoint overlap.
+
+we also measured start-to-end position separation and orientation difference for orbslam3 rgbd and our depth-backed sift pnp vo. neither method uses loop closure correction in these runs.
+
+| take | orbslam3 | our vo | verdict |
 |---|---|---|---|
 | 080033 | 0.061 m, 13.0 deg | 0.836 m, 67.6 deg | yes |
 | 075947 | 0.188 m, 8.8 deg | 0.580 m, 14.8 deg | yes |
@@ -63,9 +71,17 @@ genuine loops are 080033, 075947 and 155419. the table shows the max inlier coun
 
 the 174702 and 174818 paths end 5.1 m and 4.3 m from the start, and end against start matching finds 0 inliers on both. no endpoint overlap found on either.
 
+085611 is nominally still, and 172859 is nearly still. these are useful controls, but staying near the start is different from travelling a loop.
+
+for a verified return to the starting position, position separation measures endpoint drift. orientation difference measures rotational drift only if the camera also returns to its starting orientation. these endpoint numbers do not show accuracy along the full path.
+
+orbslam3 has smaller endpoint separations on 080033 and 075947, while our vo has slightly smaller separations on 155419. orbslam3 is our reference baseline, not ground truth.
+
+our vo paths end 6.1 m and 5.4 m away on 172532 and 172828, orbslam3 ends 0.81 m and 0.83 m away. the two methods disagree, so neither path alone settles the loop call.
+
 ![080033 orbslam3 pose map](fig2_loop_map.png)
 
-fig 2. 080033, orbslam3 pose map. the estimated path spans 6.67 by 4.44 m, end lands 0.061 m from start.
+fig 2. 080033, orbslam3 pose map. the estimated path spans 6.67 by 4.44 m, end lands 0.061 m from start. the map extent is not an independent measurement of the physical area travelled.
 
 2.4 fig 6 translation comparison
 
@@ -82,13 +98,15 @@ rotation lines up well. sift follows the imu almost exactly. orb rotation is the
 
 fig 3. fig 6 from the midterm report, section 5. imu against orb, sift, hog and bfm on 155419, 53 frame pairs. left column rotation in degrees, right column translation in meters.
 
-the mismatch is real, but the cause is not settled. the visual side is a two frame estimate with no stated scale, and the imu side is a per pair delta whose velocity handling is not stated. the two sides may not be measuring the same quantity. check the timestamps, the pair spacing, and the definitions before treating the curves as directly comparable. the axes also change from row to row, so the rows are hard to compare.
+the mismatch is real, but the cause is not settled. the visual side is a two frame estimate with no stated scale, and the imu side is a per pair delta whose velocity handling is not stated. the two sides may not be measuring the same quantity. check the timestamps, the pair spacing, and the definitions before treating the curves as directly comparable. our current depth-backed sift pnp vo does produce metric translation. that does not say which translation method made this older figure. the missing velocity is a real concern, but do not say it caused fig 6 until Don confirms what was plotted. the axes also change from row to row, so the rows are hard to compare.
 
 one note on the pair counts: 155419 has 10 pairs in the inlier test, 30 in the sim test, and 53 here, because the take is only 54 frames long and each test samples it differently.
 
 2.5 reliability check
 
 on 173701 only 47.2 percent of tracks score above 0.8, against 97.8 percent on the still control and 97.5 percent on the rotating take. the score falls from about 0.95 to about 0.3 halfway through the take, then moves between about 0.2 and 0.6. the signal stays while the camera is nominally still, so it is not large parallax. wind is the leading explanation, not proof.
+
+median track length is 1, so many tracks give no repeated observations for temporal filtering. a plain residual threshold also separates these recordings. we have shown residual-based separation, not an added benefit from the markov model. the residual is the 2d reprojection error magnitude, scored with a half-normal. that is a scoring choice, not a calibrated probability.
 
 ![reliability over time on 173701](fig4_reliability_curve.png)
 
@@ -108,21 +126,29 @@ fig 5. reliability histogram on 173701. the tracks split into two groups, near 0
 | sfm | on hold |
 | semantic cues | not started |
 
-the 6 deg gravity error is from the preintegration test. the fitted gravity direction in the init test is stable to about 0.5 deg. those are different tests, not one number.
+the combined correction test ran on withheld motion and failed all 3 pre-set criteria on both loop takes. at the 0.167 s horizon on 080033, its error is 6.74 mm against 3.58 mm for constant velocity, and it loses to constant velocity at every horizon. the 3 criteria are: beat constant velocity at the 0.167 and 0.334 s horizons on both takes, a stable correction within 0.05 m/s2 across windows, and a result that barely moves when the prior loosens from 0.05 to 0.20. the vo chain prior test was not run, the pre-set stop rule was reached.
+
+the supported imu result is the gyro rotation prior. we have not shown a useful imu translation prior on these takes.
+
+the 6 deg gravity error is from the preintegration test. the fitted gravity direction in the init test is stable to about 0.5 deg across fits. that is stability, not independently verified gravity accuracy. those are different tests, not one number. the fitted accel bias z value sits near +0.31 to +0.33 m/s2 on every window, but we have not shown that is a physical sensor offset. our zero-centered 0.05 m/s2 prior was not grounded in measured bias statistics for this device. we need independent calibration to justify its mean and uncertainty.
 
 3. findings
 
 - every take's median clears the 50 percent inlier bar, by a wide margin. a high inlier rate means the local fit is good, not that the chained pose is good. small errors pile up along the chain, especially on close range non flat grass.
 - sift stays on the true motion in sim. orb is off by about 1 deg and up to 1 cm. hog gives no pose.
 - orbslam3 ends 0.061 m from the start on 080033, with no loop closure correction, against 0.836 m and 67.6 deg for our own vo.
-- the genuine loops are 080033, 075947 and 155419. 172532 and 172828 clear the overlap bar but their paths end far away, so they are not loops. 174702 and 174818 show no endpoint overlap.
+- the genuine loops are 080033, 075947 and 155419. the 20 inlier bar also accepts the weaker takes, so it does not establish the loop labels by itself. 174702 and 174818 show no endpoint overlap.
 - fig 6 rotation lines up, translation does not, and the cause of the mismatch is not settled yet.
 - the reliability score separates this take from these two controls, and finds when it goes unreliable. it is not a general wind detector yet.
 - the imu does not fix translation on these takes. the preintegration gravity is off by about 6 deg, and the accel bias is not pinned down by the data. the gyro bias part works, and the fitted gravity direction is stable to about 0.5 deg.
 
 4. conclusion
 
-the local inlier rate is strong on every take, the loop test sorts the real loops from the rest, and the open gaps are fig 6 translation comparability and useful imu translation prediction.
+every take's median inlier rate, conditional on passing lowe filtering, passes the 50 percent bar, but good pairwise fits do not guarantee a stable accumulated trajectory. endpoint matching finds strong overlap on several takes, while the 20 inlier bar also accepts weaker cases and does not establish physical loop labels.
+
+the depth-backed pose pipeline provides metric translation. the older fig 6 comparison still needs its translation definitions and scale checked. the reliability score separates one suspected wind take from two controls, but temporal-model benefit and wind-specific detection remain unproven.
+
+the clearest imu improvement is gyro-bias estimation. the tested translation approaches have not beaten constant velocity on withheld motion, so gyro-only rotation is the supported imu prior for now.
 
 appendix. inlier rate per take
 
