@@ -1,0 +1,6 @@
+check,result,headline
+inlier rate,pass,"every take clears 50 percent. overall median 0.987. lowest take 173250 at 0.698. 1 of 505 pairs below 0.50."
+r and t accuracy,measured,"sim: sift tracks truth, orb off about 1 deg and up to 1 cm, hog no pose. loop close: orbslam3 080033 at 0.061 m and 13.0 deg."
+loop closing test,done,"genuine loops 080033, 075947, 155419. 172532, 172828, 173807, 174702 and 174818 are not loops."
+fig 6 translation,mismatch,"rotation lines up. translation does not: imu under 0.6 mm per pair, visual 2 to 57 mm."
+add list,partial,"optical flow done. imu preintegration no. visual pose init no. sfm on hold. semantic cues not started."
