@@ -1,0 +1,93 @@
+=== Per-take effective correction (fit segment) ===
+20261007_080033
+  sig=0.05: b_a=[-0.0153  0.1059  0.3582] rms pos 1.79 mm
+  sig=0.2: b_a=[-0.0164  0.1134  0.3835] rms pos 1.75 mm
+  sig=0.8: b_a=[-0.0165  0.1139  0.3852] rms pos 1.75 mm
+  |db_a| 0.05->0.2 = 0.0265 m/s^2, 0.05->0.8 = 0.0283
+20261007_075947
+  sig=0.05: b_a=[-0.135  -0.0035  0.3418] rms pos 1.99 mm
+  sig=0.2: b_a=[-0.1445 -0.0038  0.3658] rms pos 1.95 mm
+  sig=0.8: b_a=[-0.1452 -0.0038  0.3674] rms pos 1.95 mm
+  |db_a| 0.05->0.2 = 0.0258 m/s^2, 0.05->0.8 = 0.0275
+20260926_155419
+  sig=0.05: b_a=[0.0368 0.1497 0.0991] rms pos 3.53 mm
+  sig=0.2: b_a=[0.0856 0.3484 0.2306] rms pos 1.57 mm
+  sig=0.8: b_a=[0.0933 0.3799 0.2515] rms pos 1.51 mm
+  |db_a| 0.05->0.2 = 0.2432 m/s^2, 0.05->0.8 = 0.2817
+
+=== Stability: per-window effective corrections (sig=0.05) ===
+20261007_080033 n_windows=7
+  median b_a = [0.008  0.1246 0.3191]
+  per-component range = [0.1242 0.0981 0.1009]
+  max ||b_a - median|| = 0.1001 m/s^2
+    @0: [-0.033   0.0972  0.3291]
+    @12: [0.008  0.096  0.3222]
+    @24: [0.0646 0.126  0.272 ]
+    @36: [0.0547 0.1728 0.2448]
+    @48: [0.0232 0.1587 0.2282]
+    @60: [-0.0595  0.1246  0.3191]
+    @72: [-0.0411  0.0747  0.3194]
+20261007_075947 n_windows=3
+  median b_a = [-0.175  -0.0395  0.3246]
+  per-component range = [0.1171 0.0741 0.0135]
+  max ||b_a - median|| = 0.1262 m/s^2
+    @0: [-0.0698  0.0302  0.3246]
+    @12: [-0.1869 -0.0395  0.3114]
+    @24: [-0.175  -0.0439  0.3249]
+20260926_155419 n_windows=1
+  median b_a = [0.0764 0.2491 0.1663]
+  per-component range = [0. 0. 0.]
+  max ||b_a - median|| = 0.0000 m/s^2
+    @0: [0.0764 0.2491 0.1663]
+
+=== Predictions: median / p90 / frac beats CV (sig=0.05) ===
+20261007_080033
+  H1: n=64 comb med 6.74 mm p90 12.18 mm | CV med 3.58 mm p90 7.65 mm | unc med 10.45 mm | gonly med 10.34 mm | frac beats CV 0.19
+  H2: n=63 comb med 12.69 mm p90 23.02 mm | CV med 6.43 mm p90 16.16 mm | unc med 28.59 mm | gonly med 28.08 mm | frac beats CV 0.24
+  H6: n=59 comb med 64.14 mm p90 94.47 mm | CV med 20.55 mm p90 37.17 mm | unc med 210.12 mm | gonly med 206.87 mm | frac beats CV 0.05
+  H4: n=61 comb med 31.56 mm p90 49.88 mm | CV med 15.28 mm p90 27.13 mm | unc med 98.41 mm | gonly med 96.29 mm | frac beats CV 0.08
+  H8: n=57 comb med 109.97 mm p90 150.72 mm | CV med 29.76 mm p90 55.21 mm | unc med 360.79 mm | gonly med 352.48 mm | frac beats CV 0.02
+20261007_075947
+  H1: n=22 comb med 6.20 mm p90 11.51 mm | CV med 4.74 mm p90 7.02 mm | unc med 10.79 mm | gonly med 10.67 mm | frac beats CV 0.18
+  H2: n=21 comb med 12.48 mm p90 20.83 mm | CV med 9.11 mm p90 16.03 mm | unc med 29.02 mm | gonly med 30.44 mm | frac beats CV 0.33
+  H6: n=17 comb med 61.69 mm p90 102.25 mm | CV med 23.04 mm p90 69.54 mm | unc med 212.41 mm | gonly med 223.79 mm | frac beats CV 0.12
+  H4: n=19 comb med 33.22 mm p90 52.54 mm | CV med 17.16 mm p90 43.89 mm | unc med 101.14 mm | gonly med 106.07 mm | frac beats CV 0.21
+  H8: n=15 comb med 108.69 mm p90 159.11 mm | CV med 38.06 mm p90 96.44 mm | unc med 370.15 mm | gonly med 384.19 mm | frac beats CV 0.07
+20260926_155419
+  H1: n=6 comb med 9.69 mm p90 14.65 mm | CV med 9.82 mm p90 11.73 mm | unc med 11.11 mm | gonly med 11.75 mm | frac beats CV 0.67
+  H2: n=5 comb med 29.57 mm p90 33.70 mm | CV med 24.05 mm p90 28.22 mm | unc med 36.77 mm | gonly med 38.86 mm | frac beats CV 0.40
+  H6: n=1 comb med 116.99 mm p90 116.99 mm | CV med 113.89 mm p90 113.89 mm | unc med 289.77 mm | gonly med 204.05 mm | frac beats CV 0.00
+  H4: n=3 comb med 81.24 mm p90 86.21 mm | CV med 68.32 mm p90 72.41 mm | unc med 139.72 mm | gonly med 118.83 mm | frac beats CV 0.33
+  H8: n=0 (no starts)
+
+=== Sanity gate: median 1-pair IMU-combined error < 10 mm ===
+  20261007_080033: 6.74 mm -> PASS
+  20261007_075947: 6.20 mm -> PASS
+  20260926_155419: 9.69 mm -> PASS
+
+=== P1: beats CV at H=1 and H=2 (median AND frac > 0.5) ===
+  20261007_080033 H1: comb 6.74 vs CV 3.58 mm, frac 0.19 -> LOSE
+  20261007_080033 H2: comb 12.69 vs CV 6.43 mm, frac 0.24 -> LOSE
+  20261007_080033 P1: FAIL
+  20261007_075947 H1: comb 6.20 vs CV 4.74 mm, frac 0.18 -> LOSE
+  20261007_075947 H2: comb 12.48 vs CV 9.11 mm, frac 0.33 -> LOSE
+  20261007_075947 P1: FAIL
+
+=== P2: stability max deviation <= 0.05 m/s^2 ===
+  20261007_080033: 0.1001 -> FAIL
+  20261007_075947: 0.1262 -> FAIL
+
+=== P3: prior insensitivity (|db_a| <= 0.02, pred change < 25%) ===
+  20261007_080033 H1: median comb 6.74 -> 6.54 mm (3.0% change)
+  20261007_080033 H2: median comb 12.69 -> 12.36 mm (2.6% change)
+  20261007_080033: |db_a| 0.05->0.2 = 0.0265 (> 0.02) -> leg1 FAIL, leg2 PASS
+  20261007_080033 P3: FAIL
+  20261007_075947 H1: median comb 6.20 -> 5.99 mm (3.4% change)
+  20261007_075947 H2: median comb 12.48 -> 11.26 mm (9.8% change)
+  20261007_075947: |db_a| 0.05->0.2 = 0.0258 (> 0.02) -> leg1 FAIL, leg2 PASS
+  20261007_075947 P3: FAIL
+
+=== OVERALL ===
+  20261007_080033: P1 FAIL, P2 FAIL, P3 FAIL
+  20261007_075947: P1 FAIL, P2 FAIL, P3 FAIL
+  VERDICT: NULL
