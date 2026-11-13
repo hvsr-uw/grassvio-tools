@@ -17,11 +17,11 @@ p { color: #555; }
 <h1>check list results</h1>
 <table>
 <tr><th>check</th><th>result</th><th>headline</th></tr>
-<tr><td>1. inlier rate</td><td>pass</td><td>every take clears 50 percent. overall median 0.987. lowest take 173250 at 0.698. 1 of 505 pairs below 0.50.</td></tr>
+<tr><td>1. inlier rate</td><td>pass</td><td>every take median clears 50 percent. overall median 0.987. lowest take 173250 at 0.698. 504 of 505 pairs clear 0.50.</td></tr>
 <tr><td>2. r and t accuracy</td><td>measured</td><td>sim: sift tracks truth, orb off about 1 deg and up to 1 cm, hog no pose. loop close: orbslam3 080033 at 0.061 m and 13.0 deg.</td></tr>
-<tr><td>3. loop closing test</td><td>done</td><td>genuine loops 080033, 075947, 155419. 172532, 172828, 173807, 174702 and 174818 are not loops.</td></tr>
-<tr><td>4. fig 6 translation</td><td>mismatch</td><td>rotation lines up. translation does not: imu under 0.6 mm per pair, visual 2 to 57 mm.</td></tr>
-<tr><td>5. add list</td><td>partial</td><td>optical flow done. imu preintegration no. visual pose init no. sfm on hold. semantic cues not started.</td></tr>
+<tr><td>3. loop closing test</td><td>done</td><td>genuine loops 080033, 075947, 155419. 172532 and 172828 clear the overlap bar but are not loops. 174702 and 174818 show no endpoint overlap.</td></tr>
+<tr><td>4. fig 6 translation</td><td>mismatch</td><td>rotation lines up. translation does not: imu under 0.6 mm per pair. sift 2 to 5, hog 1.3 to 8.6, bfm 1.5 to 7.5, orb 2 to 57 mm.</td></tr>
+<tr><td>5. add list</td><td>partial</td><td>optical flow done. imu preintegration built, translation chaining fails. visual pose init built, gyro bias works. sfm on hold. semantic cues not started.</td></tr>
 </table>
 <p>full numbers are in report.md in the same folder.</p>
 </body>
