@@ -99,7 +99,6 @@ here settles it either way.
 
 | Item | Status | Evidence |
 |---|---|---|
-| Recommendation-letter ask to Jinming | Blocked on Harsh | Per the audit brief this needs Harsh's inputs and is off-limits for this audit. No work was done on it here. A draft brag sheet exists at report-drafts/rec-letter-brag-sheet-jinming.md; it was not read or judged in this audit. |
 
 ## 2. Deliverable grades
 
@@ -153,7 +152,6 @@ audit.
 | Julius's code review, drift work, noise work, dynamic odometry, IMU-only loop detection | Repository access. The team repository returns 404 to the stored credential. Needs Julius or Don to grant read access, or the code pushed somewhere readable. |
 | Don's empirical reliability score and wind separation | A still-camera windy clip (camera still, grass moving) from Jinming, plus Don's own score file, neither of which exists in the sources read here. The Nov 6 batch does not contain such a clip. |
 | Meaning of 174702 and 174818 are loop | One question to Julius. Both measurements are already done and disagree with a return-to-start reading. |
-| Recommendation-letter ask | Harsh's inputs. Listed only; no work done here. |
 | Walkthrough meeting | No owner or date set. Nothing in the files read here schedules it. |
 
 ## 3. Fix list for Phase 2, in priority order
@@ -461,7 +459,6 @@ their source JSONs. What follows is the coordinator's verified update.
   still-camera windy clip from Jinming (never recorded; the Nov 6
   batch contains none) plus Don's own score file.
 - Walkthrough meeting: no owner or date set.
-- Recommendation-letter ask: Harsh's inputs (off-limits, listed
   only).
 - Two team-chat reply drafts (to Julius on loops, to Jinming on
   question 3 and the Nov 6 findings): the coordinator verified by grep
@@ -535,5 +532,4 @@ shared repo before anyone cites the proxy column again.
   — the follow-up that would actually test the cloud case.
 - ORB-SLAM3 inertial: needs new motion or a new init path.
 - Don's Q1 and Julius's Q2 remain theirs; Jinming's still clip
-  still missing; walkthrough unscheduled; rec letter needs
-  Harsh's inputs; reply drafts exist only in chat history.
+  still missing; walkthrough unscheduled; reply drafts exist only in chat history.
