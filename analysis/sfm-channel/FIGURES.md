@@ -2,6 +2,22 @@
 
 Trajectory overlays and the 080033 map from the SfM channel.
 
+## Results table
+
+`summary.csv` holds the same numbers. Loop is each trajectory's
+own start-to-end distance. End is the distance between its end
+pose and the reference end pose. All three are compared at the
+same common frames.
+
+| take | alignment | verdict | SfM loop (m) | ORB loop (m) | channel 2 loop (m) | SfM end (m) | channel 2 end (m) | SfM rotation (deg) | ORB rotation (deg) | channel 2 rotation (deg) | SfM ATE (m) | SfM valid frames |
+| 080033 | prefix | PASS | 0.032 | 0.061 | 0.836 | 0.072 | 0.817 | 11.3 | 13.0 | 67.6 | 0.040 | 76 of 89 |
+| 075947 | all-frame fit only | NOT SCORED | 0.161 | 0.188 | 0.580 | 0.004 | 0.633 | 6.7 | 8.9 | 14.8 | 0.015 | 35 of 47 |
+| 155419 | prefix | PASS (thin) | 0.076 | 0.115 | 0.108 | 0.044 | 0.080 | 18.4 | 19.1 | 19.6 | 0.024 | 10 of 11 |
+
+075947 has no prefix alignment, so its row is the all-frame fit
+only and it is not scored. On 155419 the ORB loop is 0.135 m over
+the full ORB trajectory and 0.115 m on the common frames used here.
+
 ## Trajectory overlays
 
 One PNG per take. Top-down plot, same common frames, equal
