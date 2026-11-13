@@ -67,11 +67,20 @@ fig 2. 080033, orbslam3 pose map. 6.67 by 4.44 m, end lands 0.060 m from start.
 
 2.4 fig 6 translation comparison
 
-rotation lines up well. sift follows the imu almost exactly. translation does not line up. the imu stays under 0.6 mm per pair. the visual numbers run 2 to 57 mm per pair.
+rotation lines up well. sift follows the imu almost exactly. orb rotation is the noisy one, it overshoots to about 1.05 deg at pairs 23 and 38. translation does not line up. the imu stays under 0.6 mm per pair.
+
+| descriptor | translation per pair |
+|---|---|
+| sift | 2 to 5 mm, smooth |
+| hog | 1.3 to 8.6 mm |
+| bfm | 1.5 to 7.5 mm |
+| orb | 2 to 57 mm, isolated spikes |
+
+![fig 6, imu against 4 descriptors](fig5_fig6.png)
+
+fig 5. fig 6 from the midterm report, section 5. imu against orb, sift, hog and bfm on 155419, 53 frame pairs. left column rotation in degrees, right column translation in meters.
 
 the likely cause is the visual translation only gives a direction, not a real distance, and nothing in the figure says how it was lined up to the imu scale. the axes also change from row to row, so the rows are hard to compare.
-
-the fig 6 graphic is in the midterm report, section 5, and is not in this folder.
 
 2.5 reliability check
 
