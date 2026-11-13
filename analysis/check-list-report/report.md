@@ -52,11 +52,11 @@ genuine loops are 080033, 075947 and 155419. the weak takes and the oct 30 takes
 |---|---|---|---|
 | 080033 | 0.061 m, 13.0 deg | 0.836 m, 67.6 deg | yes |
 | 075947 | 0.188 m, 8.8 deg | 0.580 m, 14.8 deg | yes |
-| 155419 | - | 0.108 m, 19.6 deg | yes |
+| 155419 | 0.14 m, 20.3 deg | 0.108 m, 19.6 deg | yes |
 | 085611 | 0.0001 m, 0.01 deg | 0.238 m, 86.3 deg | still take |
 | 173807 | - | 4.926 m, 149.6 deg | no |
 | 172532 | 0.81 m, 9.3 deg | 6.102 m, 101.0 deg | no |
-| 172828 | 0.83 m | 5.394 m, 67.3 deg | no |
+| 172828 | 0.83 m, 59.0 deg | 5.394 m, 67.3 deg | no |
 | 172859 | - | 0.838 m, 29.4 deg | nearly still |
 
 the 174702 and 174818 paths end 5.1 m and 4.3 m from the start, and end against start matching finds 0 inliers on both. they are not loops.
