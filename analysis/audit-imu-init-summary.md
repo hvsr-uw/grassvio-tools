@@ -34,8 +34,9 @@ as an initialization. Per the pre-specified stop rule, tests (c) and
   from the preint stillest-window direction on the loop takes and
   2.79 deg away on 155419.
 - **Accel bias is unobservable at the level needed.** Baseline fits put
-  its z-component at about +0.31 to +0.33 m/s² on every window of both
-  loop takes (6× its prior sigma), yet weakening the prior moves the
+  its z-component stays positive on every window,
+  +0.21 to +0.33 m/s² on 080033 and +0.31 to +0.33 on 075947
+  (6× its prior sigma), yet weakening the prior moves the
   whole vector by a median 0.072 m/s², and its x-component wanders over
   a 0.25 m/s² range across windows of 080033 alone. Whether that
   +0.32 m/s² is a true bias, an accel scale error, or a gravity
