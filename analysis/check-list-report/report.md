@@ -127,7 +127,7 @@ fig 5. track median residuals on 173701, with the 0.5 px cutoff line, and the ra
 | optical flow wind check | done, works over a 25 frame window |
 | imu preintegration | built, translation chaining fails. end error up to 80 m, gravity about 6 deg off |
 | visual pose init | built, gyro bias works. 20.5 deg vs 20.8 visual, accel bias not pinned down |
-| sfm | building now, started nov 13, no results yet |
+| sfm | built and scored. 080033 passes, loop 0.032 m vs 0.836 for channel 2. 155419 passes thin, 0.076 m vs 0.108. 075947 not scored, no translation in the first 20 percent. figures in analysis/sfm-channel |
 | semantic cues | not started |
 
 the combined correction test ran on withheld motion and failed all 3 pre-set criteria on both loop takes. at the 0.167 s horizon on 080033, its error is 6.74 mm against 3.58 mm for constant velocity, and it loses to constant velocity at every horizon. the 3 criteria are: beat constant velocity at the 0.167 and 0.334 s horizons on both takes, a stable correction within 0.05 m/s2 across windows, and a result that barely moves when the prior loosens from 0.05 to 0.20. the vo chain prior test was not run, the pre-set stop rule was reached.
