@@ -10,7 +10,7 @@ loop closing test: end against start sift matching, last 5 frames against first 
 
 fig 6: imu against 4 descriptors on 155419, 53 frame pairs, midterm report section 5.
 
-reliability check: each feature gets a score for how reliable it is, from its fit residual, bayesian markov model, threshold 0.8. 3 takes: 174745 still, 173701 wind signal, 080033 rotation.
+reliability check: fraction of tracks whose median residual sits below 0.5 px, cutoff from the calibration control. 3 takes: 174745 still, 173701 wind signal, 080033 rotation.
 
 2. results
 
@@ -104,19 +104,21 @@ one note on the pair counts: 155419 has 10 pairs in the inlier test, 30 in the s
 
 2.5 reliability check
 
-on 173701 only 47.2 percent of tracks score above 0.8, against 97.8 percent on the still control and 97.5 percent on the rotating take. the score falls from about 0.95 to about 0.3 halfway through the take, then moves between about 0.2 and 0.6. the signal stays while the camera is nominally still, so it is not large parallax. wind is the leading explanation, not proof.
+the reliability model is fixed now. the old markov model is gone, because median track length is 1 and it added nothing over a plain residual rule. the headline is the fraction of tracks whose median residual is below 0.5 px. the 0.5 px cutoff is the calibration control's 90th percentile, 0.4654 px, rounded up. on 173701 only 34.4 percent of tracks sit below the cutoff, against 92.6 percent on the still control and 92.1 percent on the rotating take. the gap is 58.0 points. the fraction starts near 0.91, falls to about 0.15 in the second half, and ends near 0.2. the signal stays while the camera is nominally still, so it is not large parallax. wind is the leading explanation, not proof.
 
-median track length is 1, so many tracks give no repeated observations for temporal filtering. a plain residual threshold also separates these recordings. we have shown residual-based separation, not an added benefit from the markov model. the residual is the 2d reprojection error magnitude, scored with a half-normal. that is a scoring choice, not a calibrated probability.
+080033 mostly stays high, but pairs 68 to 76 fall to 0.22 to 0.33, so the control is not flat the whole way through.
 
-the 47.2 percent number depends on the likelihood choice. with a rayleigh likelihood instead of the half-normal, it moves to 64 percent or 26 percent depending on how the scale is set, while the ordering stays the same, 173701 far below both controls, and the curve shape holds. the 25 frame window is 0.834 seconds. the verdict comes about 0.83 seconds late but does not look ahead past the window. the 0.8 threshold has no recorded justification, it is a chosen headline value, and the gap stays about the same at 0.7 and 0.9.
+the 25 frame window is 0.834 seconds. the verdict comes about 0.83 seconds late but does not look ahead past the window.
+
+this is a homography-fit compatibility fraction, not an estimated fraction of rigid features. the rayleigh reference score is a diagnostic only, and it saturates to 0 on 173701, so it is never quoted as a result.
 
 ![reliability over time on 173701](fig4_reliability_curve.png)
 
-fig 4. mean reliability over time on 173701. it starts at control level and falls halfway through the take.
+fig 4. fraction of pair observations below 0.5 px over time on 173701. it starts at control level and falls halfway through the take.
 
 ![reliability histogram on 173701](fig5_reliability_hist.png)
 
-fig 5. reliability histogram on 173701. the tracks split into two groups, near 0 and near 1.
+fig 5. track median residuals on 173701, with the 0.5 px cutoff line, and the rayleigh reference score per pair.
 
 2.6 add list status
 
@@ -125,7 +127,7 @@ fig 5. reliability histogram on 173701. the tracks split into two groups, near 0
 | optical flow wind check | done, works over a 25 frame window |
 | imu preintegration | built, translation chaining fails. end error up to 80 m, gravity about 6 deg off |
 | visual pose init | built, gyro bias works. 20.5 deg vs 20.8 visual, accel bias not pinned down |
-| sfm | on hold |
+| sfm | building now, started nov 13, no results yet |
 | semantic cues | not started |
 
 the combined correction test ran on withheld motion and failed all 3 pre-set criteria on both loop takes. at the 0.167 s horizon on 080033, its error is 6.74 mm against 3.58 mm for constant velocity, and it loses to constant velocity at every horizon. the 3 criteria are: beat constant velocity at the 0.167 and 0.334 s horizons on both takes, a stable correction within 0.05 m/s2 across windows, and a result that barely moves when the prior loosens from 0.05 to 0.20. the vo chain prior test was not run, the pre-set stop rule was reached.
@@ -141,14 +143,14 @@ the 6 deg gravity error is from the preintegration test. the fitted gravity dire
 - orbslam3 ends 0.061 m from the start on 080033, with no loop closure correction, against 0.836 m and 67.6 deg for our own vo.
 - the genuine loops are 080033, 075947 and 155419. the 20 inlier bar also accepts the weaker takes, so it does not establish the loop labels by itself. 174702 and 174818 show no endpoint overlap.
 - fig 6 rotation lines up, translation does not, and the cause of the mismatch is not settled yet.
-- the reliability score separates this take from these two controls, and finds when it goes unreliable. it is not a general wind detector yet.
+- the compatibility fraction separates this take from these two controls, 34.4 percent against 92.6 and 92.1, and finds when it goes unreliable. it is not a general wind detector yet.
 - the imu does not fix translation on these takes. the preintegration gravity is off by about 6 deg, and the accel bias is not pinned down by the data. the gyro bias part works, and the fitted gravity direction is stable to about 0.5 deg.
 
 4. conclusion
 
 every take's median inlier rate, conditional on passing lowe filtering, passes the 50 percent bar, but good pairwise fits do not guarantee a stable accumulated trajectory. endpoint matching finds strong overlap on several takes, while the 20 inlier bar also accepts weaker cases and does not establish physical loop labels.
 
-the depth-backed pose pipeline provides metric translation. the older fig 6 comparison still needs its translation definitions and scale checked. the reliability score separates one suspected wind take from two controls, but temporal-model benefit and wind-specific detection remain unproven.
+the depth-backed pose pipeline provides metric translation. the older fig 6 comparison still needs its translation definitions and scale checked. the compatibility fraction separates one suspected wind take from two controls, but wind-specific detection remains unproven.
 
 the clearest imu improvement is gyro-bias estimation. the tested translation approaches have not beaten constant velocity on withheld motion, so gyro-only rotation is the supported imu prior for now.
 
