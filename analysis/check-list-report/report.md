@@ -108,6 +108,8 @@ on 173701 only 47.2 percent of tracks score above 0.8, against 97.8 percent on t
 
 median track length is 1, so many tracks give no repeated observations for temporal filtering. a plain residual threshold also separates these recordings. we have shown residual-based separation, not an added benefit from the markov model. the residual is the 2d reprojection error magnitude, scored with a half-normal. that is a scoring choice, not a calibrated probability.
 
+the 47.2 percent number depends on the likelihood choice. with a rayleigh likelihood instead of the half-normal, it moves to 64 percent or 26 percent depending on how the scale is set, while the ordering stays the same, 173701 far below both controls, and the curve shape holds. the 25 frame window is 0.834 seconds. the verdict comes about 0.83 seconds late but does not look ahead past the window. the 0.8 threshold has no recorded justification, it is a chosen headline value, and the gap stays about the same at 0.7 and 0.9.
+
 ![reliability over time on 173701](fig4_reliability_curve.png)
 
 fig 4. mean reliability over time on 173701. it starts at control level and falls halfway through the take.
