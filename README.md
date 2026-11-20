@@ -1,6 +1,53 @@
 # GrassVIO tools
 
-Scripts I wrote for our CS 566 GrassVIO project. The folders match the layout the scripts expect, so the imports work as they are.
+Scripts I wrote for our CS 566 GrassVIO project. The main stitching entry points now share one implementation; older experiment folders also contain historical results.
+
+## Homography and window-motion update
+
+The current implementation and validation status are in
+[analysis/meeting-followup.md](analysis/meeting-followup.md). Start there for
+what changed and what still needs the original recordings. The related-work
+check is in [research/motion-filter-related-work.md](research/motion-filter-related-work.md).
+
+Install and check:
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m pytest -q tests
+python scripts/validate_meeting_work.py --outdir analysis/meeting-followup-validation
+```
+
+Normal descriptor stitching, with source frames beside the warped map:
+
+```bash
+python stitch-map/stitch_map.py --video input.mp4 --out map.png \
+  --blend best --debug-out debug.png
+```
+
+Window filtering on a recording independently known to be stationary:
+
+```bash
+python stitch-map/stitch_map.py --bag stationary.db3 --out filtered.png \
+  --motion-filter --flow-window 25 --camera-still --debug-out debug.png
+```
+
+For a moving camera, replace `--camera-still` with
+`--camera-motion motion.json` containing full pixel motion, including
+translation. The schema is in the follow-up. Omitting both uses a visual
+plane proxy and cannot independently distinguish wind from camera motion.
+The historical `dataset-tools/stitch-map/stitch_map.py` entry point calls
+this same implementation.
+
+SfM keyframe conditioning (undistorted images, matching input calibration):
+
+```bash
+python stitch-map/sfm_keyframes.py --video input.mp4 \
+  --calibration camera.json --out keyframes.json --min-parallax-deg 2
+```
+
+`camera.json` contains `{"K": [[fx,0,cx],[0,fy,cy],[0,0,1]]}` with numeric
+values for the input image resolution. This selects candidate pairs; it
+does not run a full SfM reconstruction or recover metric scale.
 
 ## stitch-map/stitch_map.py
 
