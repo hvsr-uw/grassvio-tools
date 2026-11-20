@@ -89,3 +89,43 @@ def test_heldout_summary_uses_medians_and_only_paired_finite_changes():
     assert result['filter_median_unfiltered_heldout_error_px'] == 3.5
     assert result['filter_paired_heldout_windows'] == 3
     assert result['filter_paired_median_error_change_px'] == -1.
+
+
+def test_rejected_render_keeps_diagnostics_and_can_resume(tmp_path):
+    import sys
+    fake = tmp_path / 'reject.py'
+    fake.write_text(textwrap.dedent('''
+        import json, sys
+        from pathlib import Path
+        Path(sys.argv[1]).write_text(json.dumps({'render_status':'rejected',
+            'render_error':'canvas exceeds render budget','frames_total':901,
+            'frames_used':181,'pairs_skipped':0}))
+        sys.exit(1)
+    '''))
+    output = tmp_path / 'map.png'
+    state = tmp_path / 'state.json'
+    command = [sys.executable, str(fake), str(output.with_suffix('.json'))]
+    first, stats, action = mod.run_stage(command, output, state, 'same-code')
+    assert first['status'] == 'failed'
+    assert first['diagnostics_available'] is True
+    assert stats['frames_used'] == 181
+    assert action == 'executed'
+    second, cached, action = mod.run_stage(command, output, state, 'same-code')
+    assert action == 'cached'
+    assert cached == stats
+    assert second['status'] == 'failed'
+    assert not output.exists()
+
+
+def test_partial_map_is_not_reported_as_complete_placement():
+    state = {'status': 'passed'}
+    stats = {'frames_total': 101, 'frames_selected': 5, 'frames_used': 2,
+        'pairs_skipped': 3, 'selected_frames': [0,25,50,75,100],
+        'transforms_to_first': [[[1,0,0],[0,1,0],[0,0,1]],
+                                [[1,0,2],[0,1,0],[0,0,1]],None,None,None]}
+    result = mod.summarize(Path('x.db3'),
+        {'camera_mode': 'visual_plane_only', 'starts_at_rest': None},
+        {'baseline': (state, stats), 'filtered': (state, stats)})
+    assert result['filter_status'] == 'passed'
+    assert result['filter_complete_placement'] is False
+    assert result['filter_last_placed_frame'] == 25

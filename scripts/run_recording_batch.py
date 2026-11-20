@@ -25,6 +25,10 @@ REPORT_FIELDS = (
     "filter_median_heldout_error_px", "filter_windows",
     "filter_median_unfiltered_heldout_error_px", "filter_paired_heldout_windows",
     "filter_paired_median_error_change_px",
+    "baseline_render_status", "filter_render_status", "baseline_error", "filter_error",
+    "baseline_frames_total", "filter_frames_total",
+    "baseline_complete_placement", "filter_complete_placement",
+    "baseline_last_placed_frame", "filter_last_placed_frame",
 )
 
 
@@ -113,12 +117,17 @@ def stage_command(script, recording, stage, target, config, args):
 
 def run_stage(command, output, state_path, signature, rerun=False):
     stats_path = output.with_suffix(".json")
-    if not rerun and state_path.is_file() and output.is_file() and stats_path.is_file():
+    if not rerun and state_path.is_file() and stats_path.is_file():
         try:
             previous = read_json(state_path)
-            if (previous.get("fingerprint") == signature and
-                    previous.get("status") == "passed"):
-                return previous, read_json(stats_path), "cached"
+            stats = read_json(stats_path)
+            if previous.get("fingerprint") == signature:
+                if previous.get("status") == "passed" and output.is_file():
+                    return previous, stats, "cached"
+                if (previous.get("status") == "failed" and
+                        previous.get("diagnostics_available") is True and
+                        stats.get("render_status") == "rejected"):
+                    return previous, stats, "cached"
         except (ValueError, OSError):
             pass
     result = {"status": "failed", "fingerprint": signature, "updated_at": stamp()}
@@ -134,12 +143,12 @@ def run_stage(command, output, state_path, signature, rerun=False):
             completed = subprocess.run(command, stdout=logfile, stderr=subprocess.STDOUT,
                                        check=False)
         result["exit_code"] = completed.returncode
+        stats = read_json(stats_path) if stats_path.is_file() else {}
         if completed.returncode == 0 and output.is_file() and stats_path.is_file():
-            stats = read_json(stats_path)
             result["status"] = "passed"
         else:
-            stats = {}
-            result["error"] = "command failed or output missing; see the local log"
+            result["diagnostics_available"] = bool(stats)
+            result["error"] = stats.get("render_error", "command failed or output missing; see the local log")
     except (OSError, ValueError) as exc:
         stats = {}
         result["error"] = str(exc)
@@ -163,6 +172,18 @@ def summarize(recording, config, cases):
                       for w in windows if isinstance(w, dict)
                       and finite_error(w.get("heldout_median_error_px"))
                       and finite_error(w.get("heldout_unfiltered_median_error_px"))]
+    def complete_placement(stats):
+        selected = stats.get("frames_selected")
+        if not isinstance(selected, int) or selected < 2:
+            return None
+        return stats.get("frames_used") == selected and stats.get("pairs_skipped") == 0
+
+    def last_placed(stats):
+        indices = stats.get("selected_frames", [])
+        poses = stats.get("transforms_to_first", [])
+        placed = [index for index, pose in zip(indices, poses) if pose is not None]
+        return max(placed) if placed else None
+
     return {
         "recording": recording.name, "camera_mode": config["camera_mode"],
         "starts_at_rest": config["starts_at_rest"],
@@ -176,6 +197,11 @@ def summarize(recording, config, cases):
         "filter_median_unfiltered_heldout_error_px": median(unfiltered_errors) if unfiltered_errors else None,
         "filter_paired_heldout_windows": len(paired_changes),
         "filter_paired_median_error_change_px": median(paired_changes) if paired_changes else None,
+        "baseline_render_status": bs.get("render_status"), "filter_render_status": fs.get("render_status"),
+        "baseline_error": base[0].get("error"), "filter_error": filt[0].get("error"),
+        "baseline_frames_total": bs.get("frames_total"), "filter_frames_total": fs.get("frames_total"),
+        "baseline_complete_placement": complete_placement(bs), "filter_complete_placement": complete_placement(fs),
+        "baseline_last_placed_frame": last_placed(bs), "filter_last_placed_frame": last_placed(fs),
     }
 
 
@@ -223,6 +249,7 @@ def run_batch(args):
         atomic_json(args.output_dir.resolve() / "summary.json",
                     {"generated_at": stamp(), "real_recordings_tested": True,
                      "pose_ground_truth_available": False, "camera_still_means_entire_recording": True,
+                     "passed_means": "command and render completed; check complete_placement for trajectory coverage",
                      "results": report})
         with (args.output_dir.resolve() / "summary.csv").open("w", newline="") as fp:
             writer = csv.DictWriter(fp, fieldnames=REPORT_FIELDS)

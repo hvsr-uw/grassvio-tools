@@ -20,7 +20,7 @@ one, I use a visual plane fit as a proxy. That proxy can follow moving grass,
 so it does not independently separate wind from camera movement. A low gyro
 reading alone does not establish that the camera is stationary.
 
-I ran 39 regression checks and four synthetic camera/grass combinations.
+I ran 48 regression checks and four synthetic camera/grass combinations.
 The camera prediction in these tests is known exactly. The patch is
 synthetic texture rather than a physical grass simulation.
 
@@ -186,10 +186,31 @@ plane fallback because I have no independent whole-video motion evidence.
 The SQLite integrity check passed, and I kept the maps, original-frame
 comparisons and logs locally.
 
-I have not repeated the full
-three-channel comparison with this new runner on the original `.db3` files
-in the current workspace. The earlier recorded results do not replace
-that check. In particular, a quiet first second can help initialize
+I also ran all 4,080 colour frames from six November 19 recordings through
+both methods. Neither method placed a complete sequence on any video.
+Five filtered runs and two descriptor runs rendered partial maps; the
+other maps exceeded the canvas budget. The first lost filtered window in
+every video still had 431 to 1,034 inliers, but its composed transform put
+a projective horizon inside the frame. Direct first-to-end matches still
+found 1,442 to 1,933 inliers at the filtered endpoints. I saved the exact
+counts and limitations in
+[the November results](analysis/november-recording-validation.md).
+
+I save the placement and window diagnostics even when rendering is
+rejected. The command still fails and no new map is written. The batch
+runner can reuse those diagnostics on the next run, and it reports map
+rendering separately from complete placement. A command that rendered a
+partial map does not count as a complete sequence.
+
+I inspect sensor streams and check direct image loops with:
+
+```bash
+python scripts/inspect_recordings.py --input-dir recordings --output-dir local-results/sensors
+python scripts/check_recording_loops.py --input-dir recordings --results-dir local-results/maps
+```
+
+I have not completed the full three-channel comparison. In particular,
+a quiet first second can help initialize
 velocity, but does not by itself establish accelerometer bias, gravity
 orientation or long-term metric translation.
 

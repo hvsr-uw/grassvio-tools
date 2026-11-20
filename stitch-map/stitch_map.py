@@ -70,6 +70,14 @@ LOOP_REANCHOR_MIN = 50
 LOOP_MIN_GAP = 5
 
 
+class StitchFailure(ValueError):
+    """A rejected map with the already-computed placement diagnostics."""
+
+    def __init__(self, message, stats):
+        super().__init__(message)
+        self.stats = dict(stats, render_status="rejected", render_error=message)
+
+
 def load_frames_from_bag(bag_path, max_frames=0):
     """Decode all colour frames of a .db3 bag, in timestamp order."""
     db = sqlite3.connect(Path(bag_path).resolve().as_uri() + "?mode=ro", uri=True)
@@ -351,9 +359,6 @@ def stitch(frames, stride, detector_name, loop_check=False, place="chain",
                     inlier_counts.append(inliers)
                     last_placed = pos
     selected = [frames[idx] for idx in chosen]
-    if sum(T is not None for T in transforms) < 2:
-        raise ValueError("fewer than two frames could be placed; no trustworthy mosaic")
-    mosaic, render_stats = render_mosaic(selected, transforms, blend, max_side, max_pixels)
     stats = {"frames_total": len(frames), "frames_selected": len(chosen),
              "frames_used": sum(T is not None for T in transforms),
              "pairs_skipped": len(unplaced), "frames_unplaced": [chosen[p] for p in unplaced],
@@ -366,8 +371,14 @@ def stitch(frames, stride, detector_name, loop_check=False, place="chain",
              "motion_residual_px": motion_residual_px if motion_filter else None,
              "windows": window_stats, "pairs": pair_stats,
              "selected_frames": chosen,
-             "transforms_to_first": [T.tolist() if T is not None else None for T in transforms],
-             **render_stats}
+             "transforms_to_first": [T.tolist() if T is not None else None for T in transforms]}
+    if stats["frames_used"] < 2:
+        raise StitchFailure("fewer than two frames could be placed; no trustworthy mosaic", stats)
+    try:
+        mosaic, render_stats = render_mosaic(selected, transforms, blend, max_side, max_pixels)
+    except ValueError as exc:
+        raise StitchFailure(str(exc), stats) from exc
+    stats.update(render_stats, render_status="rendered")
     if debug_out:
         write_debug_panel(selected, chosen, transforms, mosaic, render_stats, debug_out)
     return mosaic, stats
@@ -452,6 +463,12 @@ def main():
                                camera_still=args.camera_still, camera_motion=camera_motion,
                                blend=args.blend, max_side=args.max_side, max_pixels=args.max_pixels,
                                debug_out=args.debug_out)
+    except StitchFailure as exc:
+        stats_path = os.path.splitext(args.out)[0] + ".json"
+        with open(stats_path, "w", encoding="utf-8") as f:
+            json.dump(exc.stats, f, indent=2, allow_nan=False)
+        print(f"stitch failed: {exc}; diagnostics saved to {stats_path}", file=sys.stderr)
+        return 1
     except ValueError as exc:
         print(f"stitch failed: {exc}", file=sys.stderr)
         return 1

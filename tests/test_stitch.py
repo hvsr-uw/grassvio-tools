@@ -121,3 +121,20 @@ def test_stable_failed_pair_returns_failure_status(monkeypatch, tmp_path):
                                      '--out', str(tmp_path/'failed')])
     assert stable_homography.main() == 1
     assert not (tmp_path/'failed_norm_only.png').exists()
+
+
+def test_rejected_canvas_saves_diagnostics_without_a_map(monkeypatch, tmp_path):
+    import json
+    import sys
+    monkeypatch.setattr(stitch_map, 'load_frames_from_folder', lambda *args: frames())
+    target = tmp_path / 'oversized.png'
+    monkeypatch.setattr(sys, 'argv', ['stitch_map.py', '--frames', 'unused',
+        '--stride', '1', '--max-side', '20', '--out', str(target)])
+    assert stitch_map.main() == 1
+    assert not target.exists()
+    stats = json.loads(target.with_suffix('.json').read_text())
+    assert stats['render_status'] == 'rejected'
+    assert 'exceeds render budget' in stats['render_error']
+    assert stats['frames_total'] == stats['frames_used'] == 3
+    assert len(stats['pairs']) == 2
+    assert len(stats['transforms_to_first']) == 3
