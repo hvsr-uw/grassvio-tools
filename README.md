@@ -173,6 +173,51 @@ that check. In particular, a quiet first second can help initialize
 velocity, but does not by itself establish accelerometer bias, gravity
 orientation or long-term metric translation.
 
+## Windows laptop with UW Box Drive
+
+I use the Windows launcher when the camera recordings are already on my
+computer. It avoids rebuilding a temporary work environment each time and
+runs the baseline and motion-filter checks without a chat session.
+
+I install [Box Drive](https://support.box.com/hc/en-us/articles/360043695994-Download-Box-Drive-and-Edit),
+sign in with my UW account and find the recordings folder in File Explorer.
+If the folder is visible and I have the necessary download permission, I
+mark just those recordings **Always keep on this device**, then wait for
+the offline checkmarks. Box Drive can resume interrupted downloads.
+
+I clone the review branch and run this command from that checkout:
+
+§§§powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_local_windows.ps1 -SourceDir "PATH_TO_OFFLINE_RECORDINGS_FOLDER" -UseSourceInPlace
+§§§
+
+This runs from the offline Box Drive folder without copying the whole data
+set again. The script never changes the source files. I can instead
+download the recordings from the Box website into an ordinary directory
+and run the same command without the `-UseSourceInPlace` option. In
+that mode the script copies matching files into its own private local
+folder before testing them. It selects the November 19 recordings and
+the 080033 comparison by filename, and I can override `-NamePattern`
+for another set.
+
+The script clones or updates the reviewed code in its own separate
+workspace, creates a Python environment, checks the SQLite topic tables,
+then runs the image-motion batch script. Outputs stay in that private
+workspace. It starts with 300 frames per video to limit memory use.
+I can specify `-MaxFrames 0` for full length after checking available RAM.
+The batch script stores logs and checkpoints, so identical completed
+runs are skipped. I keep my laptop awake while a run is active.
+
+If the folder is available only through a shared link and does not appear
+in Box Drive, I use the Box website to download the individual recordings.
+Only files I have permission to access are included; no login tokens
+are stored, and nothing is uploaded to GitHub or Box by these scripts.
+
+I have validated the launcher's syntax with automated checks, but I
+have not run a complete Box-to-Windows experiment in this environment.
+These image-consistency comparisons do not finish the IMU/SfM
+three-channel validation.
+
 ## Other scripts and earlier results
 
 I use `bag-exploration/explore_bag.py` to read the ROS 2 SQLite recordings
