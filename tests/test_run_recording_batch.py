@@ -129,3 +129,18 @@ def test_partial_map_is_not_reported_as_complete_placement():
     assert result['filter_status'] == 'passed'
     assert result['filter_complete_placement'] is False
     assert result['filter_last_placed_frame'] == 25
+
+
+def test_atomic_summary_retries_transient_windows_file_lock(tmp_path,monkeypatch):
+    replace=mod.os.replace
+    attempts=[]
+    def locked_twice(source,target):
+        attempts.append(1)
+        if len(attempts)<3:raise PermissionError('temporary scanner lock')
+        replace(source,target)
+    monkeypatch.setattr(mod.os,'replace',locked_twice)
+    monkeypatch.setattr(mod.time,'sleep',lambda seconds:None)
+    target=tmp_path/'summary.json'
+    mod.atomic_json(target,{'completed':True})
+    assert json.loads(target.read_text())=={'completed':True}
+    assert len(attempts)==3

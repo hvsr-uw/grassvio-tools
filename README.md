@@ -2,6 +2,38 @@
 
 I use these scripts for the CS 566 GrassVIO project.
 
+## Motion recovery and channel checks
+
+I keep homography tracking separate from the projection used to draw a
+map. A full-image warp that crosses a projective horizon no longer deletes
+a valid local motion link in the recovery runner. I save bounded local
+maps and retain the connected homography graph. I split a failed tracking
+window into shorter filtered windows before declaring a gap.
+
+I also use each recording's calibration to register depth into the colour
+camera, estimate metric RGB-D motion and draw an orthographic map. After a
+depth gap, I attempt relocalization with SIFT sites that have themselves
+passed temporal tracking and filtering. Unsupported gaps stay explicit.
+
+I compare RGB-D, gyro integration and two-view SfM geometry at common
+windows. I fit gyro bias and a clock-shift hypothesis on the first 20% of
+each video, then score later windows. I separately test accelerometer bias,
+gravity and velocity initialization. A completed command does not mean
+that this inertial initialization passed its checks.
+
+```bash
+python scripts/run_motion_recovery.py --input-dir recordings --output-dir local-results/recovery
+```
+
+I save a checkpoint and log for each stage. Repeating the command reuses
+completed stages when the recordings, code, dependencies and parameters
+match. The full results and remaining limitations are in
+[motion-recovery-results.md](analysis/motion-recovery-results.md).
+
+The earlier first-image projection experiments below remain a separate
+baseline. The local homography maps are not one metric orthomosaic, and
+the RGB-D poses are a model reference rather than ground truth.
+
 ## Homography and motion filtering
 
 I fixed the normalized homography threshold so the inlier cutoff stays at
@@ -20,7 +52,7 @@ one, I use a visual plane fit as a proxy. That proxy can follow moving grass,
 so it does not independently separate wind from camera movement. A low gyro
 reading alone does not establish that the camera is stationary.
 
-I ran 48 regression checks and four synthetic camera/grass combinations.
+I ran 67 regression checks and four synthetic camera/grass combinations.
 The camera prediction in these tests is known exactly. The patch is
 synthetic texture rather than a physical grass simulation.
 

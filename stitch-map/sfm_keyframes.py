@@ -55,6 +55,8 @@ def assess_two_view(src, dst, K, min_parallax_deg=2., min_points=20):
         if (support.sum() >= min_points and consensus.mean() >= .8 and
                 support[consensus].mean() >= .9):
             result["reason"] = "rotation_only_explains_matches"
+            result["R_source_to_target"] = rotation.tolist()
+            result["rotation_deg"] = float(np.rad2deg(np.arccos(np.clip((np.trace(rotation)-1)/2,-1,1))))
             return result
     E, mask = cv2.findEssentialMat(src, dst, K, method=cv2.RANSAC,
                                  prob=.999, threshold=1.)
