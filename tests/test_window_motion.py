@@ -57,3 +57,19 @@ def test_stationary_mode_tracks_real_pixels():
     assert result[3]['complete_tracks'] >= 100
     assert result[3]['prefilter_rejected'] == 0
     np.testing.assert_allclose(result[2], np.eye(3), atol=1e-5)
+
+
+def test_flow_pairs_can_apply_semantic_cues_without_claiming_wind_causality():
+    rng = np.random.default_rng(8)
+    gray = rng.integers(0, 256, (120, 160), dtype=np.uint8)
+    bgr = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+    result = list(flow_pairs([gray] * 8, window=5, semantic_images=[bgr] * 8))
+    assert len(result) == 2
+    assert all("semantic_rejected" in row[3] for row in result)
+    assert all(not row[3]["wind_cause_verified"] for row in result)
+
+
+def test_flow_pairs_rejects_mismatched_semantic_sequence():
+    gray = np.zeros((40, 40), dtype=np.uint8)
+    with pytest.raises(ValueError, match="semantic image sequence"):
+        list(flow_pairs([gray] * 3, semantic_images=[cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)]))
