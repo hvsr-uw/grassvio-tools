@@ -205,11 +205,10 @@ def run_recording(bag,atlas_dir,outdir):
         static_gyro = gyro[(gts >= static_window["start_ns"]) & (gts <= static_window["end_ns"])]
         biases={"raw_gyro":np.zeros(3),
                 "conditional_static_window_demean":static_gyro.mean(axis=0)}
+        # Delay inertial propagation until the first valid RGB-D edge. This
+        # gives the IMU an observed visual initial velocity when the take did
+        # not begin at rest, instead of silently forcing velocity to zero.
         inertial={};initializations={}
-        for name,bias in biases.items():
-            inertial[name],initializations[name]=inertial_path(gts,gyro,ats,accel,times,
-                recording.color_from_gyro[0],recording.color_from_accel[0],
-                recording.color_from_gyro[1],bias,gravity_window=static_window)
         variants={name:[] for name in biases}
         poses=[np.eye(4)];pose_indices=[0];component_ids=[0];pose_sources=["initial_anchor"]
         next_component=1
@@ -265,6 +264,16 @@ def run_recording(bag,atlas_dir,outdir):
                         "earlier_frames_reconnected":[pose_indices[i] for i in recovered],**recovery_stats}
             poses.append(next_pose);component_ids.append(next_id);pose_sources.append(pose_source)
             pose_indices.append(end)
+            if not inertial and pnp is not None:
+                dt = float(recording.color_times[end] - recording.color_times[start]) / 1e9
+                visual_velocity = (next_pose[:3, 3] / dt) if dt > 0 else np.zeros(3)
+                for name,bias in biases.items():
+                    inertial[name],initializations[name]=inertial_path(
+                        gts,gyro,ats,accel,times,
+                        recording.color_from_gyro[0],recording.color_from_accel[0],
+                        recording.color_from_gyro[1],bias,
+                        gravity_window=static_window,
+                        initial_velocity=visual_velocity)
             for name,path in inertial.items():
                 record=dict(common)
                 if start not in indices or end not in indices:
@@ -282,6 +291,15 @@ def run_recording(bag,atlas_dir,outdir):
                     record["imu_translation_disagreement_m"]=float(np.linalg.norm(ti-pnp[:3,3]))
                 variants[name].append(record)
             print(f"{bag.name}: {start}->{end}, RGB-D={pnp_stats['status']}, SfM={sfm['reason']}",flush=True)
+        if not inertial:
+            # Keep a complete diagnostic file even when no RGB-D edge could
+            # initialize a visual velocity reference.
+            for name,bias in biases.items():
+                inertial[name],initializations[name]=inertial_path(
+                    gts,gyro,ats,accel,times,
+                    recording.color_from_gyro[0],recording.color_from_accel[0],
+                    recording.color_from_gyro[1],bias,
+                    gravity_window=static_window)
         result={"recording":bag.name,"clock_shift_ms":0.,"metric_ground_truth_available":False,
                 "sfm_metric_translation_available":False,"three_channel_agreement_established":False,
                 "static_initialization_window":static_window,
