@@ -34,6 +34,29 @@ The earlier first-image projection experiments below remain a separate
 baseline. The local homography maps are not one metric orthomosaic, and
 the RGB-D poses are a model reference rather than ground truth.
 
+## Multiview reconstruction and refined timing
+
+I also run image-only incremental SfM across the sampled views. I carry
+temporally filtered feature sites through successive windows, triangulate
+landmarks, register cameras with PnP, and jointly refine the cameras and
+structure with bundle adjustment. Depth and IMU do not enter that camera
+fit. I estimate one metric scale afterward from registered depth in the
+initial image. I reserve feature tracks for an image-consistency check.
+
+```bash
+python scripts/run_multiview_validation.py --input-dir recordings --recovery-dir local-results/recovery --output-dir local-results/multiview --adaptive-gaps
+```
+
+This also widens the prefix-only gyro timing search, tests a constrained
+inertial initializer, compares later SfM, RGB-D and gyro motion, and draws
+a separate registered-depth map through the labelled SfM poses. The
+modules reuse measurements when source and input fingerprints match. I
+use closer keyframes and five-frame feature support when the ordinary SfM
+run has unsupported views. This is a separate window setting; it does not
+show that the original 25-frame setting handled that motion. I
+keep the results in [multiview-results.md](analysis/multiview-results.md).
+These checks do not supply independent metric ground truth.
+
 ## Homography and motion filtering
 
 I fixed the normalized homography threshold so the inlier cutoff stays at
@@ -52,7 +75,7 @@ one, I use a visual plane fit as a proxy. That proxy can follow moving grass,
 so it does not independently separate wind from camera movement. A low gyro
 reading alone does not establish that the camera is stationary.
 
-I ran 67 regression checks and four synthetic camera/grass combinations.
+I ran 78 regression checks and four synthetic camera/grass combinations.
 The camera prediction in these tests is known exactly. The patch is
 synthetic texture rather than a physical grass simulation.
 
@@ -320,10 +343,11 @@ stretched near its far end. Those numbers belong to the earlier matcher;
 they have not been rerun with the corrected fitter and reciprocal matching.
 A high pairwise inlier count does not establish an accurate chained path.
 
-The current priority is testing the corrected homography and window filter
-on original videos. The IMU/RGB-D translation comparison also needs a video
-with a known zero starting velocity. I still need matching timestamps,
-calibration and a common metric scale before comparing all three channels.
+I have now tested recovery on six original November 19 videos and added
+multiview SfM with a scale estimated from initial depth. Independent IMU
+translation still fails validation. I need stronger initialization data,
+verified camera motion and a metric reference before claiming agreement
+between all three channels.
 
 I keep the related-work findings in
 [motion-filter-related-work.md](research/motion-filter-related-work.md).
