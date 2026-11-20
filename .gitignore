@@ -2,5 +2,5 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .venv/
-analysis/meeting-followup-validation/*_debug.png
-analysis/meeting-followup-validation/*_map.png
+analysis/window-filter-validation/*_debug.png
+analysis/window-filter-validation/*_map.png

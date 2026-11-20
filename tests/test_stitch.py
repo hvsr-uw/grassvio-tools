@@ -110,3 +110,14 @@ def test_short_sequence_without_loop_writes_normalized_only(monkeypatch, tmp_pat
     assert record['global_drift_corrected'] is False
     assert (tmp_path/'short_norm_only.png').exists()
     assert not (tmp_path/'short_loop_reanchored.png').exists()
+
+
+def test_stable_failed_pair_returns_failure_status(monkeypatch, tmp_path):
+    import sys
+    monkeypatch.setattr(stable_homography, 'load_frames',
+                        lambda *args: (frames(), [(None, None)]*3))
+    monkeypatch.setattr(stable_homography, 'match_h', lambda *args: (None, 0))
+    monkeypatch.setattr(sys, 'argv', ['stable_homography.py', '--bag', 'unused.db3',
+                                     '--out', str(tmp_path/'failed')])
+    assert stable_homography.main() == 1
+    assert not (tmp_path/'failed_norm_only.png').exists()

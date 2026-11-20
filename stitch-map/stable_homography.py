@@ -139,7 +139,7 @@ def main():
                            feats[k][0], feats[k][1], matcher, True)
         if Hm is None:
             print(f"pair {k-1}->{k} failed (inliers {inl})", flush=True)
-            return
+            return 1
         Hs.append(Hm)
         pair_inliers.append(inl)
     Ts = [np.eye(3)]
@@ -190,7 +190,8 @@ def main():
         "global_drift_corrected": False,
     }, open(args.out + "_stable.json", "w"), indent=2)
     print("done", flush=True)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
