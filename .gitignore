@@ -4,3 +4,13 @@ __pycache__/
 .venv/
 analysis/window-filter-validation/*_debug.png
 analysis/window-filter-validation/*_map.png
+
+## Raw datasets and local evaluation outputs
+*.db3
+*.bag
+*.mcap
+*.avi
+*.mp4
+recordings/
+local-results/
+real-results/
