@@ -88,7 +88,52 @@ def fit_anchor_loop(points3d,target_rays,anchor_pixels,focal):
     return (transform if accepted else None),stats
 
 
-def inertial_path(gts,gyro,ats,accel,query_times,rotation_cg,rotation_ca,imu_origin_in_color,gyro_bias):
+def estimate_static_window(gts, gyro, ats, accel, window_seconds=0.5, min_samples=20):
+    """Choose the quietest measured window for gravity initialization.
+
+    A recording does not necessarily begin at rest. We score candidate
+    windows using gyro magnitude and accelerometer-magnitude variation, then
+    use the lowest-score window instead of blindly using the first second.
+    This is an initialization heuristic, not proof that the camera was still.
+    """
+    gts, ats = np.asarray(gts, dtype=np.int64), np.asarray(ats, dtype=np.int64)
+    gyro, accel = np.asarray(gyro, dtype=float), np.asarray(accel, dtype=float)
+    if gts.ndim != 1 or ats.ndim != 1 or gyro.shape != (len(gts), 3) or accel.shape != (len(ats), 3):
+        raise ValueError("sensor timestamps and samples have incompatible shapes")
+    if window_seconds <= 0 or min_samples < 2:
+        raise ValueError("window_seconds and min_samples must be positive")
+    if not (len(gts) and len(ats)):
+        raise ValueError("sensor streams are empty")
+    duration = int(round(window_seconds * 1e9))
+    lower = max(int(gts[0]), int(ats[0]))
+    upper = min(int(gts[-1]), int(ats[-1])) - duration
+    if upper < lower:
+        raise ValueError("sensor streams are shorter than the static window")
+    starts = np.unique(np.r_[gts[(gts >= lower) & (gts <= upper)],
+                             ats[(ats >= lower) & (ats <= upper)]])
+    best = None
+    for start in starts:
+        end = int(start + duration)
+        gm = np.linalg.norm(gyro[(gts >= start) & (gts <= end)], axis=1)
+        am = np.linalg.norm(accel[(ats >= start) & (ats <= end)], axis=1)
+        if len(gm) < min_samples or len(am) < min_samples:
+            continue
+        gyro_score = float(np.median(gm))
+        accel_mad = float(np.median(np.abs(am - np.median(am))))
+        candidate = (gyro_score + accel_mad, int(start), end,
+                     gyro_score, accel_mad, len(gm), len(am))
+        if best is None or candidate < best:
+            best = candidate
+    if best is None:
+        raise ValueError("no static-window candidate has enough samples")
+    score, start, end, gyro_score, accel_mad, gyro_count, accel_count = best
+    return {"start_ns": start, "end_ns": end, "duration_s": window_seconds,
+            "score": float(score), "median_gyro_norm": gyro_score,
+            "accel_norm_mad": accel_mad, "gyro_samples": gyro_count,
+            "accel_samples": accel_count}
+
+
+def inertial_path(gts,gyro,ats,accel,query_times,rotation_cg,rotation_ca,imu_origin_in_color,gyro_bias,\n                  gravity_window=None, initial_velocity=None):
     query_times=np.asarray(query_times,dtype=np.int64)
     first,last=query_times[0],query_times[-1]
     if first<max(gts[0],ats[0]) or last>min(gts[-1],ats[-1]):
@@ -96,10 +141,17 @@ def inertial_path(gts,gyro,ats,accel,query_times,rotation_cg,rotation_ca,imu_ori
     grid=np.unique(np.r_[gts[(gts>=first)&(gts<=last)],query_times])
     omega=np.column_stack([np.interp(grid,gts,gyro[:,k]-gyro_bias[k]) for k in range(3)])@rotation_cg.T
     force=np.column_stack([np.interp(grid,ats,accel[:,k]) for k in range(3)])@rotation_ca.T
-    startup=accel[(ats>=first)&(ats<=first+1_000_000_000)]
-    if len(startup)<30:raise ValueError("insufficient startup accelerometer samples")
+    if gravity_window is None:
+        gravity_window = estimate_static_window(gts, gyro, ats, accel)
+    gravity_start = int(gravity_window["start_ns"])
+    gravity_end = int(gravity_window["end_ns"])
+    startup=accel[(ats>=gravity_start)&(ats<=gravity_end)]
+    if len(startup)<30:raise ValueError("insufficient static-window accelerometer samples")
     gravity=-(startup@rotation_ca.T).mean(axis=0)
-    r=np.eye(3);p=np.zeros(3);velocity=np.cross(omega[0],imu_origin_in_color)
+    r=np.eye(3);p=np.zeros(3)
+    velocity = (np.zeros(3) if initial_velocity is None else
+                np.asarray(initial_velocity, dtype=float).reshape(3).copy())
+    velocity += np.cross(omega[0],imu_origin_in_color)
     output={}
     wanted=set(int(t) for t in query_times)
     if int(grid[0]) in wanted:output[int(grid[0])]=(r.copy(),p.copy())
@@ -115,8 +167,10 @@ def inertial_path(gts,gyro,ats,accel,query_times,rotation_cg,rotation_ca,imu_ori
         if int(grid[k+1]) in wanted:
             # Transform the IMU-origin displacement to the colour-camera origin.
             output[int(grid[k+1])]=(r.copy(),p+imu_origin_in_color-r@imu_origin_in_color)
-    return output,{"initial_camera_velocity":"assumed_zero_not_verified",
-                   "gravity_from":"first_second_accelerometer_mean",
+    return output,{"initial_camera_velocity":
+                   "assumed_zero_not_verified" if initial_velocity is None else "provided_visual_reference",
+                   "gravity_from":"selected_low_motion_window",
+                   "gravity_window":gravity_window,
                    "gravity_vector":gravity.tolist(),"accelerometer_bias_separately_estimated":False,
                    "gyro_bias_used":np.asarray(gyro_bias).tolist()}
 
@@ -147,12 +201,15 @@ def run_recording(bag,atlas_dir,outdir):
         # Retain only intervals covered by both recorded IMU streams.
         indices=[i for i in indices if max(gts[0],ats[0])<=recording.color_times[i]<=min(gts[-1],ats[-1])]
         times=recording.color_times[indices]
-        prefix=(gts>=times[0])&(gts<=times[0]+1_000_000_000)
-        biases={"raw_gyro":np.zeros(3),"conditional_startup_demean":gyro[prefix].mean(axis=0)}
+        static_window = estimate_static_window(gts, gyro, ats, accel)
+        static_gyro = gyro[(gts >= static_window["start_ns"]) & (gts <= static_window["end_ns"])]
+        biases={"raw_gyro":np.zeros(3),
+                "conditional_static_window_demean":static_gyro.mean(axis=0)}
         inertial={};initializations={}
         for name,bias in biases.items():
             inertial[name],initializations[name]=inertial_path(gts,gyro,ats,accel,times,
-                recording.color_from_gyro[0],recording.color_from_accel[0],recording.color_from_gyro[1],bias)
+                recording.color_from_gyro[0],recording.color_from_accel[0],
+                recording.color_from_gyro[1],bias,gravity_window=static_window)
         variants={name:[] for name in biases}
         poses=[np.eye(4)];pose_indices=[0];component_ids=[0];pose_sources=["initial_anchor"]
         next_component=1
@@ -227,6 +284,7 @@ def run_recording(bag,atlas_dir,outdir):
             print(f"{bag.name}: {start}->{end}, RGB-D={pnp_stats['status']}, SfM={sfm['reason']}",flush=True)
         result={"recording":bag.name,"clock_shift_ms":0.,"metric_ground_truth_available":False,
                 "sfm_metric_translation_available":False,"three_channel_agreement_established":False,
+                "static_initialization_window":static_window,
                 "depth_registration":"recorded_reference_to_stream_extrinsics_and_sdk_distortion",
                 "initializations":initializations,"summaries":{name:summarize(records,name) for name,records in variants.items()},
                 "comparisons":variants,"rgbd_pose_indices":pose_indices,
