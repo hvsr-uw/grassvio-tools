@@ -57,6 +57,28 @@ show that the original 25-frame setting handled that motion. I
 keep the results in [multiview-results.md](analysis/multiview-results.md).
 These checks do not supply independent metric ground truth.
 
+## Semantic cues and IMU initialization
+
+The temporal optical-flow check now has a separate semantic cue module in
+`stitch-map/semantic_cues.py`. It computes an auditable vegetation-like
+likelihood from colour, then rejects a point only when the point is both
+vegetation-like and inconsistent with the fitted camera motion. A green
+surface with rigid motion is kept. This is a conservative cue, not a learned
+semantic segmentation model and not proof that wind caused the residual.
+
+IMU gravity and gyro bias initialization no longer assumes that the first
+second is static. The channel runner searches measured sensor windows for the
+lowest gyro motion and accelerometer-norm variation. If an RGB-D edge is
+available, it also uses that first visual displacement to initialize camera
+velocity. If no visual edge can initialize it, the output records the
+zero-velocity fallback explicitly. The gyro update and acceleration update
+use trapezoidal integration. The resulting translation is still treated as
+a diagnostic: the existing withheld-motion tests do not validate an
+independent IMU translation prior.
+
+The detailed historical checklist is in
+[check-list-report/report.md](analysis/check-list-report/report.md).
+
 ## Homography and motion filtering
 
 I fixed the normalized homography threshold so the inlier cutoff stays at
