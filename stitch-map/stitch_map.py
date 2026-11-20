@@ -4,8 +4,9 @@
 For the SLAM side of the project we need a map built from what the camera
 sees. This script takes one recording, lines up its frames using feature
 matches between neighbouring frames, and pastes them onto one big canvas.
-The camera looks down at a mostly flat ground plane, so a homography is the
-right transform between frames.
+A homography approximates the ground as a plane. Camera translation over
+three-dimensional grass can violate that approximation and cause drift,
+even when many feature matches fit each pairwise transform.
 
 Inputs (pick one):
   --bag  take.db3     a ROS bag file from our recordings (read directly,
@@ -46,6 +47,7 @@ import hashlib
 import json
 import os
 import sqlite3
+from pathlib import Path
 import sys
 
 import cv2
@@ -68,14 +70,25 @@ LOOP_REANCHOR_MIN = 50
 LOOP_MIN_GAP = 5
 
 
-def load_frames_from_bag(bag_path):
+class StitchFailure(ValueError):
+    """A rejected map with the already-computed placement diagnostics."""
+
+    def __init__(self, message, stats):
+        super().__init__(message)
+        self.stats = dict(stats, render_status="rejected", render_error=message)
+
+
+def load_frames_from_bag(bag_path, max_frames=0):
     """Decode all colour frames of a .db3 bag, in timestamp order."""
-    db = sqlite3.connect(f"file:{bag_path}?mode=ro", uri=True)
+    db = sqlite3.connect(Path(bag_path).resolve().as_uri() + "?mode=ro", uri=True)
     db.execute("PRAGMA query_only=ON")
     tid = db.execute("select id from topics where name=?", (COLOR,)).fetchone()[0]
-    rows = db.execute(
-        "select data from messages where topic_id=? order by timestamp",
-        (tid,)).fetchall()
+    query = "select data from messages where topic_id=? order by timestamp"
+    params = (tid,)
+    if max_frames > 0:
+        query += " limit ?"
+        params += (max_frames,)
+    rows = db.execute(query, params).fetchall()
     db.close()
     frames = []
     for (blob,) in rows:
@@ -86,10 +99,10 @@ def load_frames_from_bag(bag_path):
     return frames
 
 
-def load_frames_from_video(video_path):
+def load_frames_from_video(video_path, max_frames=0):
     cap = cv2.VideoCapture(video_path)
     frames = []
-    while True:
+    while max_frames <= 0 or len(frames) < max_frames:
         ok, frame = cap.read()
         if not ok:
             break
@@ -98,9 +111,11 @@ def load_frames_from_video(video_path):
     return frames
 
 
-def load_frames_from_folder(folder):
+def load_frames_from_folder(folder, max_frames=0):
     names = sorted(f for f in os.listdir(folder)
                    if f.lower().endswith((".png", ".jpg", ".jpeg")))
+    if max_frames > 0:
+        names = names[:max_frames]
     return [cv2.imread(os.path.join(folder, n)) for n in names]
 
 
@@ -344,9 +359,6 @@ def stitch(frames, stride, detector_name, loop_check=False, place="chain",
                     inlier_counts.append(inliers)
                     last_placed = pos
     selected = [frames[idx] for idx in chosen]
-    if sum(T is not None for T in transforms) < 2:
-        raise ValueError("fewer than two frames could be placed; no trustworthy mosaic")
-    mosaic, render_stats = render_mosaic(selected, transforms, blend, max_side, max_pixels)
     stats = {"frames_total": len(frames), "frames_selected": len(chosen),
              "frames_used": sum(T is not None for T in transforms),
              "pairs_skipped": len(unplaced), "frames_unplaced": [chosen[p] for p in unplaced],
@@ -359,8 +371,14 @@ def stitch(frames, stride, detector_name, loop_check=False, place="chain",
              "motion_residual_px": motion_residual_px if motion_filter else None,
              "windows": window_stats, "pairs": pair_stats,
              "selected_frames": chosen,
-             "transforms_to_first": [T.tolist() if T is not None else None for T in transforms],
-             **render_stats}
+             "transforms_to_first": [T.tolist() if T is not None else None for T in transforms]}
+    if stats["frames_used"] < 2:
+        raise StitchFailure("fewer than two frames could be placed; no trustworthy mosaic", stats)
+    try:
+        mosaic, render_stats = render_mosaic(selected, transforms, blend, max_side, max_pixels)
+    except ValueError as exc:
+        raise StitchFailure(str(exc), stats) from exc
+    stats.update(render_stats, render_status="rendered")
     if debug_out:
         write_debug_panel(selected, chosen, transforms, mosaic, render_stats, debug_out)
     return mosaic, stats
@@ -420,13 +438,11 @@ def main():
     args = ap.parse_args()
 
     if args.bag:
-        frames = load_frames_from_bag(args.bag)
+        frames = load_frames_from_bag(args.bag, args.max_frames)
     elif args.video:
-        frames = load_frames_from_video(args.video)
+        frames = load_frames_from_video(args.video, args.max_frames)
     else:
-        frames = load_frames_from_folder(args.frames)
-    if args.max_frames:
-        frames = frames[:args.max_frames]
+        frames = load_frames_from_folder(args.frames, args.max_frames)
     if len(frames) < 2:
         print("not enough frames to stitch", file=sys.stderr)
         return 1
@@ -447,6 +463,12 @@ def main():
                                camera_still=args.camera_still, camera_motion=camera_motion,
                                blend=args.blend, max_side=args.max_side, max_pixels=args.max_pixels,
                                debug_out=args.debug_out)
+    except StitchFailure as exc:
+        stats_path = os.path.splitext(args.out)[0] + ".json"
+        with open(stats_path, "w", encoding="utf-8") as f:
+            json.dump(exc.stats, f, indent=2, allow_nan=False)
+        print(f"stitch failed: {exc}; diagnostics saved to {stats_path}", file=sys.stderr)
+        return 1
     except ValueError as exc:
         print(f"stitch failed: {exc}", file=sys.stderr)
         return 1

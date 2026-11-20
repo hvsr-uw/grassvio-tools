@@ -9,6 +9,7 @@ import cv2
 import numpy as np
 
 from geometry import apply_transform, fit_homography, projected_corners
+from heldout_diagnostics import evaluate_heldout_window
 
 
 def validate_camera_motion(data, frame_count):
@@ -133,4 +134,8 @@ def flow_pairs(grays, window=25, residual_threshold_px=1.5, camera_still=False,
                  "inliers": int(mask.sum()) if mask is not None else 0,
                  "camera_evidence": mode, "ok": H is not None,
                  "wind_cause_verified": False}
+        stats.update(evaluate_heldout_window(
+            history, models, residual_threshold_px,
+            temporal_filter, fit_homography, apply_transform,
+            min_inliers=min_inliers))
         yield start, end, H, stats
