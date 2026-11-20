@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import time
 from statistics import median
 from datetime import datetime, timezone
 
@@ -42,7 +43,14 @@ def atomic_json(path, obj):
     with temp.open("w", encoding="utf-8") as fp:
         json.dump(obj, fp, indent=2, allow_nan=False)
         fp.write("\n")
-    os.replace(temp, path)
+    # Windows file scanners can briefly hold an otherwise writable JSON file.
+    for attempt in range(6):
+        try:
+            os.replace(temp, path)
+            break
+        except PermissionError:
+            if attempt==5:raise
+            time.sleep(.05*2**attempt)
 
 
 def read_json(path):

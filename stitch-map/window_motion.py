@@ -24,12 +24,14 @@ def validate_camera_motion(data, frame_count):
     return H
 
 
-def track_window(grays, max_features=2000, fb_threshold_px=1.):
+def track_window(grays, max_features=2000, fb_threshold_px=1., initial_points=None, return_ids=False):
     """Detect only at the first anchor; surviving tracks retain their IDs."""
-    starts = cv2.goodFeaturesToTrack(grays[0], maxCorners=max_features,
+    starts = (cv2.goodFeaturesToTrack(grays[0], maxCorners=max_features,
                                     qualityLevel=.01, minDistance=7, blockSize=7)
-    if starts is None:
-        return np.empty((len(grays), 0, 2)), 0
+              if initial_points is None else np.asarray(initial_points,np.float32).reshape(-1,1,2))
+    if starts is None or not len(starts):
+        empty=(np.empty((len(grays), 0, 2)),0)
+        return (*empty,np.empty(0,dtype=int)) if return_ids else empty
     n = len(starts)
     history = np.full((len(grays), n, 2), np.nan)
     history[0] = starts.reshape(-1, 2)
@@ -62,7 +64,8 @@ def track_window(grays, max_features=2000, fb_threshold_px=1.):
         history[k, ids] = points.reshape(-1, 2)
     # A window verdict requires observations throughout the whole window.
     complete = np.isfinite(history).all(axis=(0, 2))
-    return history[:, complete], n
+    result=(history[:, complete],n)
+    return (*result,np.flatnonzero(complete)) if return_ids else result
 
 
 def temporal_filter(history, camera_models=None, residual_threshold_px=1.5):
@@ -94,7 +97,8 @@ def temporal_filter(history, camera_models=None, residual_threshold_px=1.5):
 
 
 def flow_pairs(grays, window=25, residual_threshold_px=1.5, camera_still=False,
-               camera_motion=None, min_inliers=20, normalize=True):
+               camera_motion=None, min_inliers=20, normalize=True,
+               reject_full_frame_horizon=True, track_observer=None):
     """Yield next->anchor H and diagnostics, once per completed window.
 
     Consumes every intermediate frame for flow and re-detects at anchors.
@@ -119,7 +123,7 @@ def flow_pairs(grays, window=25, residual_threshold_px=1.5, camera_still=False,
         keep, scores = temporal_filter(history, models, residual_threshold_px)
         H, mask = fit_homography(history[-1, keep], history[0, keep],
                                  normalize=normalize, min_inliers=min_inliers)
-        if H is not None:
+        if H is not None and reject_full_frame_horizon:
             try:
                 projected_corners(H, grays[end].shape)
             except ValueError:
@@ -138,4 +142,6 @@ def flow_pairs(grays, window=25, residual_threshold_px=1.5, camera_still=False,
             history, models, residual_threshold_px,
             temporal_filter, fit_homography, apply_transform,
             min_inliers=min_inliers))
+        if track_observer is not None:
+            track_observer(start, end, history, keep, mask)
         yield start, end, H, stats
