@@ -24,6 +24,7 @@ param(
     [switch]$SkipCopy,
     [switch]$UseSourceInPlace,
     [switch]$SkipInstall,
+    [string]$SummaryMirrorDir = '',
     [switch]$DryRun
 )
 
@@ -125,7 +126,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $repo '.git'))) {
 
 $pythonBase = $null
 if (Get-Command py -ErrorAction SilentlyContinue) {
-    & py -3 -c 'import sys; print(sys.version_info[:2])' | Out-Null
+    & py -3 -c 'import sys; assert sys.version_info >= (3,9)' | Out-Null
     if ($LASTEXITCODE -eq 0) { $pythonBase = 'py' }
 }
 if (-not $pythonBase -and (Get-Command python -ErrorAction SilentlyContinue)) {
@@ -194,6 +195,14 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host ""
+if (-not [string]::IsNullOrWhiteSpace($SummaryMirrorDir)) {
+    $null = New-Item -ItemType Directory -Force -Path $SummaryMirrorDir
+    foreach ($filename in @('summary.csv', 'summary.json')) {
+        Copy-Item -LiteralPath (Join-Path $outputDir $filename) -Destination (Join-Path $SummaryMirrorDir $filename) -Force
+    }
+    Write-Host "Copied only summary CSV/JSON to: $SummaryMirrorDir"
+    Write-Host 'If that folder syncs to a cloud service, these summaries will sync there.'
+}
 Write-Host "Finished. Compare results at: $outputDir"
 Write-Host ("Summary: " + (Join-Path $outputDir 'summary.csv'))
 Write-Host 'These are image-motion checks, not proof of correct IMU or SfM translation.'
