@@ -10,6 +10,7 @@ import numpy as np
 
 from geometry import apply_transform, fit_homography, projected_corners
 from heldout_diagnostics import evaluate_heldout_window
+from semantic_cues import sample_likelihood, semantic_motion_keep, vegetation_likelihood
 
 
 def validate_camera_motion(data, frame_count):
@@ -98,7 +99,8 @@ def temporal_filter(history, camera_models=None, residual_threshold_px=1.5):
 
 def flow_pairs(grays, window=25, residual_threshold_px=1.5, camera_still=False,
                camera_motion=None, min_inliers=20, normalize=True,
-               reject_full_frame_horizon=True, track_observer=None):
+               reject_full_frame_horizon=True, track_observer=None,
+               semantic_images=None, semantic_vegetation_threshold=0.35):
     """Yield next->anchor H and diagnostics, once per completed window.
 
     Consumes every intermediate frame for flow and re-detects at anchors.
@@ -111,6 +113,8 @@ def flow_pairs(grays, window=25, residual_threshold_px=1.5, camera_still=False,
         raise ValueError("choose known-still acquisition or a camera-motion file")
     if camera_motion is not None and len(camera_motion) != len(grays):
         raise ValueError("camera motion length differs from input frames")
+    if semantic_images is not None and len(semantic_images) != len(grays):
+        raise ValueError("semantic image sequence length differs from input frames")
     mode = "known_stationary" if camera_still else ("independent_full_motion" if camera_motion is not None else "visual_plane_only")
     for start in range(0, len(grays) - 1, window):
         end = min(start + window, len(grays) - 1)
@@ -121,6 +125,16 @@ def flow_pairs(grays, window=25, residual_threshold_px=1.5, camera_still=False,
         elif camera_motion is not None:
             models = camera_motion[start:end+1] @ np.linalg.inv(camera_motion[start])
         keep, scores = temporal_filter(history, models, residual_threshold_px)
+        semantic_rejected = 0
+        if semantic_images is not None and len(history[0]):
+            likelihood = vegetation_likelihood(semantic_images[start])
+            vegetation = sample_likelihood(likelihood, history[0])
+            semantic_keep, _ = semantic_motion_keep(
+                vegetation, scores,
+                vegetation_threshold=semantic_vegetation_threshold,
+                residual_threshold_px=residual_threshold_px)
+            semantic_rejected = int(np.count_nonzero(keep & ~semantic_keep))
+            keep &= semantic_keep
         H, mask = fit_homography(history[-1, keep], history[0, keep],
                                  normalize=normalize, min_inliers=min_inliers)
         if H is not None and reject_full_frame_horizon:
@@ -134,6 +148,7 @@ def flow_pairs(grays, window=25, residual_threshold_px=1.5, camera_still=False,
                  "complete_tracks": int(history.shape[1]),
                  "prefilter_kept": int(keep.sum()),
                  "prefilter_rejected": int(len(keep) - keep.sum()),
+                 "semantic_rejected": semantic_rejected,
                  "median_temporal_residual_px": float(np.median(finite)) if len(finite) else None,
                  "inliers": int(mask.sum()) if mask is not None else 0,
                  "camera_evidence": mode, "ok": H is not None,
