@@ -1,7 +1,8 @@
 import cv2
 import numpy as np
 import pytest
-from motion_channels import estimate_pnp,inertial_path,angle,reconnect_component,fit_anchor_loop
+from motion_channels import (estimate_pnp, inertial_path, angle, reconnect_component,
+                             fit_anchor_loop, estimate_static_window)
 
 
 def test_pnp_recovers_target_from_source_metric_pose():
@@ -58,3 +59,29 @@ def test_loop_fit_checks_spatially_unfitted_tracks():
     fitted,stats=fit_anchor_loop(points,corrupted,pixels,400.)
     assert fitted is None
     assert stats['loop_heldout_median_error_px']>30
+
+
+def test_static_window_does_not_assume_the_recording_starts_at_rest():
+    times = np.arange(601, dtype=np.int64) * 5_000_000
+    gyro = np.zeros((len(times), 3))
+    accel = np.tile([0., -9.81, 0.], (len(times), 1))
+    # The first 0.5 s is moving. A quiet interval occurs later.
+    gyro[:100, 2] = 1.0
+    accel[:100, 0] = 0.8
+    window = estimate_static_window(times, gyro, times, accel, window_seconds=0.5)
+    assert window["start_ns"] >= times[100]
+    assert window["median_gyro_norm"] == 0.0
+
+
+def test_inertial_path_accepts_a_visual_initial_velocity():
+    times = np.arange(401, dtype=np.int64) * 5_000_000
+    gyro = np.zeros((len(times), 3))
+    accel = np.tile([0., -9.81, 0.], (len(times), 1))
+    path, init = inertial_path(
+        times, gyro, times, accel, times[[0, 200, 400]], np.eye(3), np.eye(3),
+        np.zeros(3), np.zeros(3),
+        gravity_window={"start_ns": 0, "end_ns": 500_000_000},
+        initial_velocity=np.array([1., 0., 0.]),
+    )
+    np.testing.assert_allclose(path[int(times[-1])][1], [2., 0., 0.], atol=1e-10)
+    assert init["initial_camera_velocity"] == "provided_visual_reference"
