@@ -133,7 +133,8 @@ def estimate_static_window(gts, gyro, ats, accel, window_seconds=0.5, min_sample
             "accel_samples": accel_count}
 
 
-def inertial_path(gts,gyro,ats,accel,query_times,rotation_cg,rotation_ca,imu_origin_in_color,gyro_bias,\n                  gravity_window=None, initial_velocity=None):
+def inertial_path(gts,gyro,ats,accel,query_times,rotation_cg,rotation_ca,imu_origin_in_color,gyro_bias,
+                  gravity_window=None, initial_velocity=None):
     query_times=np.asarray(query_times,dtype=np.int64)
     first,last=query_times[0],query_times[-1]
     if first<max(gts[0],ats[0]) or last>min(gts[-1],ats[-1]):
