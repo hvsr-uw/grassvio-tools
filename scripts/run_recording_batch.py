@@ -8,10 +8,12 @@ import argparse
 import csv
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
 import sys
+from statistics import median
 from datetime import datetime, timezone
 
 
@@ -21,6 +23,8 @@ REPORT_FIELDS = (
     "baseline_frames_used", "filter_frames_used", "baseline_pairs_skipped",
     "filter_pairs_skipped", "baseline_median_inliers", "filter_median_inliers",
     "filter_median_heldout_error_px", "filter_windows",
+    "filter_median_unfiltered_heldout_error_px", "filter_paired_heldout_windows",
+    "filter_paired_median_error_change_px",
 )
 
 
@@ -148,8 +152,17 @@ def summarize(recording, config, cases):
     base, filt = cases["baseline"], cases["filtered"]
     bs, fs = base[1], filt[1]
     windows = fs.get("windows", [])
-    independent_errors = [w.get("heldout_median_error_px") for w in windows
-                          if isinstance(w, dict) and isinstance(w.get("heldout_median_error_px"), (float, int))]
+    def finite_error(value):
+        return type(value) in (float, int) and math.isfinite(value) and value >= 0
+
+    filtered_errors = [w["heldout_median_error_px"] for w in windows
+                       if isinstance(w, dict) and finite_error(w.get("heldout_median_error_px"))]
+    unfiltered_errors = [w["heldout_unfiltered_median_error_px"] for w in windows
+                         if isinstance(w, dict) and finite_error(w.get("heldout_unfiltered_median_error_px"))]
+    paired_changes = [w["heldout_median_error_px"] - w["heldout_unfiltered_median_error_px"]
+                      for w in windows if isinstance(w, dict)
+                      and finite_error(w.get("heldout_median_error_px"))
+                      and finite_error(w.get("heldout_unfiltered_median_error_px"))]
     return {
         "recording": recording.name, "camera_mode": config["camera_mode"],
         "starts_at_rest": config["starts_at_rest"],
@@ -158,9 +171,11 @@ def summarize(recording, config, cases):
         "baseline_pairs_skipped": bs.get("pairs_skipped"), "filter_pairs_skipped": fs.get("pairs_skipped"),
         "baseline_median_inliers": bs.get("median_inliers"),
         "filter_median_inliers": fs.get("median_inliers"),
-        "filter_median_heldout_error_px": (sum(independent_errors) / len(independent_errors)
-                                             if independent_errors else None),
+        "filter_median_heldout_error_px": median(filtered_errors) if filtered_errors else None,
         "filter_windows": len(windows),
+        "filter_median_unfiltered_heldout_error_px": median(unfiltered_errors) if unfiltered_errors else None,
+        "filter_paired_heldout_windows": len(paired_changes),
+        "filter_paired_median_error_change_px": median(paired_changes) if paired_changes else None,
     }
 
 

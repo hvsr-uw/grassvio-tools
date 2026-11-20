@@ -69,3 +69,23 @@ def test_missing_names_fail_without_partial_run(tmp_path):
     with pytest.raises(ValueError, match='missing'):
         mod.run_batch(args)
     assert not args.output_dir.exists()
+
+
+def test_heldout_summary_uses_medians_and_only_paired_finite_changes():
+    windows = [
+        {'heldout_median_error_px': 1., 'heldout_unfiltered_median_error_px': 3.},
+        {'heldout_median_error_px': 2., 'heldout_unfiltered_median_error_px': 3.},
+        {'heldout_median_error_px': 100., 'heldout_unfiltered_median_error_px': 10.},
+        {'heldout_median_error_px': None, 'heldout_unfiltered_median_error_px': 4.},
+        {'heldout_median_error_px': float('nan')},
+        {'heldout_median_error_px': float('inf')},
+        {'heldout_median_error_px': True},
+    ]
+    state = {'status': 'passed'}
+    result = mod.summarize(Path('x.db3'),
+        {'camera_mode': 'visual_plane_only', 'starts_at_rest': None},
+        {'baseline': (state, {}), 'filtered': (state, {'windows': windows})})
+    assert result['filter_median_heldout_error_px'] == 2.
+    assert result['filter_median_unfiltered_heldout_error_px'] == 3.5
+    assert result['filter_paired_heldout_windows'] == 3
+    assert result['filter_paired_median_error_change_px'] == -1.

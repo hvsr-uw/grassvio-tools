@@ -20,7 +20,7 @@ one, I use a visual plane fit as a proxy. That proxy can follow moving grass,
 so it does not independently separate wind from camera movement. A low gyro
 reading alone does not establish that the camera is stationary.
 
-I ran 25 regression checks and four synthetic camera/grass combinations.
+I ran 39 regression checks and four synthetic camera/grass combinations.
 The camera prediction in these tests is known exactly. The patch is
 synthetic texture rather than a physical grass simulation.
 
@@ -35,7 +35,7 @@ I measure homography error as the mean distance between the estimated and
 true transformed pixels on a fixed 7-by-5 grid. I score patch interiors away
 from seams and report surviving tracks. The full counts and settings are in
 [synthetic_results.json](analysis/window-filter-validation/synthetic_results.json).
-I have not run this version on the original videos yet.
+I also ran the September control video; its results are below.
 
 ![Synthetic source frames beside their map footprints](analysis/window-filter-validation/synthetic_debug_preview.jpg)
 
@@ -104,6 +104,11 @@ and also fits a plane homography. Pure rotation is not a triangulation
 baseline. Strong plane support is flagged because an essential-matrix
 pose can be ambiguous on a plane.
 
+I first check whether a rotation alone explains the matched points. This
+keeps a degenerate essential-matrix fit from inventing enough translation
+to select a pure-rotation pair. I checked zero rotation, larger rotations,
+small pixel noise and mismatches, while keeping the translation test.
+
 ```bash
 python stitch-map/sfm_keyframes.py --video input.mp4 \
   --calibration camera.json --out keyframes.json --min-parallax-deg 2
@@ -165,8 +170,23 @@ unchanged. The per-window held-out error is still image consistency rather
 than ground-truth camera pose, so lower error does not prove wind detection
 or agreement among the motion channels.
 
-I checked the batch runner and held-out diagnostic with seven focused
-tests using generated and mocked inputs. I have not repeated the full
+I include both unfiltered and filtered held-out errors in the summary and
+use the median across windows. I also report the median paired change on
+windows where both diagnostic fits succeeded; negative means lower error
+after filtering. Missing or non-finite scores do not enter those summaries.
+
+I ran all 173 colour frames from `20260926_102608b.db3`. The descriptor
+baseline placed 35 selected frames, and the 25-frame filter placed eight
+window anchors across seven windows. Neither run skipped a selected pair.
+These methods select different numbers of frames, so the counts are not
+a direct accuracy comparison. The median held-out errors before and after
+filtering were both 0.05277 pixels, and the median paired change was zero.
+This video does not show an improvement from filtering. I used the visual
+plane fallback because I have no independent whole-video motion evidence.
+The SQLite integrity check passed, and I kept the maps, original-frame
+comparisons and logs locally.
+
+I have not repeated the full
 three-channel comparison with this new runner on the original `.db3` files
 in the current workspace. The earlier recorded results do not replace
 that check. In particular, a quiet first second can help initialize
@@ -212,6 +232,9 @@ If the folder is available only through a shared link and does not appear
 in Box Drive, I use the Box website to download the individual recordings.
 Only files I have permission to access are included; no login tokens
 are stored, and nothing is uploaded to GitHub or Box by these scripts.
+
+I pass the selected recording names to the batch runner so other recordings
+in the same input directory are left out.
 
 I have validated the launcher's syntax with automated checks, but I
 have not run a complete Box-to-Windows experiment in this environment.

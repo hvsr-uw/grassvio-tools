@@ -4,8 +4,9 @@
 For the SLAM side of the project we need a map built from what the camera
 sees. This script takes one recording, lines up its frames using feature
 matches between neighbouring frames, and pastes them onto one big canvas.
-The camera looks down at a mostly flat ground plane, so a homography is the
-right transform between frames.
+A homography approximates the ground as a plane. Camera translation over
+three-dimensional grass can violate that approximation and cause drift,
+even when many feature matches fit each pairwise transform.
 
 Inputs (pick one):
   --bag  take.db3     a ROS bag file from our recordings (read directly,

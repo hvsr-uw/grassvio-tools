@@ -182,6 +182,10 @@ $runArgs = @(
     (Join-Path $repo 'scripts\run_recording_batch.py'),
     '--input-dir', $inputDir,
     '--output-dir', $outputDir,
+    '--names'
+)
+$runArgs += @($recordings | Sort-Object Name | ForEach-Object { $_.Name })
+$runArgs += @(
     '--max-frames', "$MaxFrames",
     '--window', '25',
     '--stride', '5',

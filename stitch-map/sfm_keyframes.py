@@ -33,16 +33,34 @@ def assess_two_view(src, dst, K, min_parallax_deg=2., min_points=20):
     result["plane_homography"] = H.tolist() if H is not None else None
     if H is not None:
         result["plane_median_error_px"] = float(np.median(np.linalg.norm(apply_transform(H, src) - dst, axis=1)))
-    E, mask = cv2.findEssentialMat(src, dst, K, method=cv2.RANSAC,
-                                 prob=.999, threshold=1.)
-    if E is None or mask is None:
-        result["reason"] = "essential_fit_failed"
-        return result
     invK = np.linalg.inv(K)
     rays_a = np.column_stack((src, np.ones(len(src)))) @ invK.T
     rays_b = np.column_stack((dst, np.ones(len(dst)))) @ invK.T
     rays_a /= np.linalg.norm(rays_a, axis=1, keepdims=True)
     rays_b /= np.linalg.norm(rays_b, axis=1, keepdims=True)
+    if mask_h is not None:
+        # Essential-matrix decomposition is degenerate under pure rotation
+        # and can invent a translation with apparently positive depths.
+        # Check a rotation-only fit before trusting that decomposition.
+        consensus = mask_h.ravel() != 0
+        U, _, Vt = np.linalg.svd(rays_b[consensus].T @ rays_a[consensus])
+        correction = np.diag([1., 1., np.linalg.det(U @ Vt)])
+        rotation = U @ correction @ Vt
+        rotation_pixels = apply_transform(K @ rotation @ invK, src)
+        errors = np.linalg.norm(rotation_pixels - dst, axis=1)
+        support = np.isfinite(errors) & (errors <= 1.)
+        result["rotation_only_inlier_fraction"] = float(support.mean())
+        finite = errors[np.isfinite(errors)]
+        result["rotation_only_median_error_px"] = float(np.median(finite)) if len(finite) else None
+        if (support.sum() >= min_points and consensus.mean() >= .8 and
+                support[consensus].mean() >= .9):
+            result["reason"] = "rotation_only_explains_matches"
+            return result
+    E, mask = cv2.findEssentialMat(src, dst, K, method=cv2.RANSAC,
+                                 prob=.999, threshold=1.)
+    if E is None or mask is None:
+        result["reason"] = "essential_fit_failed"
+        return result
     best = None
     for candidate in np.asarray(E).reshape(-1, 3, 3):
         count, R, t, cheirality = cv2.recoverPose(candidate, src, dst, K, mask=mask.copy())
