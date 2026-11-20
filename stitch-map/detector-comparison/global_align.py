@@ -27,7 +27,8 @@ import cv2
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                "..", "dataset-tools", "stitch-map"))
+                                ".."))
+from geometry import render_mosaic
 from stitch_map import (MIN_INLIERS, downscale,  # noqa: E402
                         load_frames_from_bag, load_frames_from_folder,
                         load_frames_from_video, place_by_tree)
@@ -90,6 +91,7 @@ def main():
               file=sys.stderr)
 
     transforms, _, _, unplaced = place_by_tree(n, edges)
+    edges = [edge for edge in edges if edge[1] not in unplaced and edge[2] not in unplaced]
     transforms = [T.astype(float) for T in transforms]
     h, w = frames[0].shape[:2]
     corners = np.array([[0, 0], [w, 0], [w, h], [0, h]], dtype=float)
@@ -130,28 +132,11 @@ def main():
         transforms = new_transforms
     residual_after = mean_residual(transforms, edges, corners)
 
-    all_pts = []
-    for T in transforms:
-        all_pts.append(cv2.perspectiveTransform(
-            corners.astype(np.float32).reshape(-1, 1, 2),
-            T.astype(float)))
-    all_pts = np.concatenate(all_pts, axis=0)
-    x_min, y_min = np.floor(all_pts.min(axis=0)[0]).astype(int)
-    x_max, y_max = np.ceil(all_pts.max(axis=0)[0]).astype(int)
-    shift = np.array([[1, 0, -x_min], [0, 1, -y_min], [0, 0, 1]], dtype=float)
-    canvas_w, canvas_h = x_max - x_min, y_max - y_min
-
-    acc = np.zeros((canvas_h, canvas_w, 3), dtype=np.float64)
-    cover = np.zeros((canvas_h, canvas_w), dtype=np.float64)
-    ones = np.ones((h, w), dtype=np.float64)
-    for idx, T in zip(chosen, transforms):
-        M = shift @ T
-        warped = cv2.warpPerspective(frames[idx], M, (canvas_w, canvas_h))
-        mask = cv2.warpPerspective(ones, M, (canvas_w, canvas_h))
-        acc += warped.astype(np.float64) * mask[..., None]
-        cover += mask
-    cover[cover == 0] = 1
-    mosaic = (acc / cover[..., None]).astype(np.uint8)
+    mosaic, render_stats = render_mosaic(
+        [frames[idx] for idx in chosen],
+        [None if i in unplaced else T for i, T in enumerate(transforms)])
+    canvas_w = render_stats['canvas_width_px']
+    canvas_h = render_stats['canvas_height_px']
 
     cv2.imwrite(args.out, mosaic)
     stats = {

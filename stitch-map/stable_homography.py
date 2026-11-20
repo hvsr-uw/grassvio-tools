@@ -1,15 +1,10 @@
 #!/usr/bin/env python3
 """Stable-homography panorama for GrassVIO (Jinming Q3).
 
-Tries to stabilize the chained-homography panorama on 20261007_080033:
-  (a) Hartley-normalized per-pair homographies (re-verify Nov 2 result)
-  (b) loop-closure anchor: the last frames match the first frames, so the
-      measured end-to-start homography constrains the chain end. The
-      accumulated error D = H_loop @ inv(T_chain_end) is distributed
-      linearly across the chain: T_k' = ((1-a) I + a D) @ T_k, a = k/n.
-
-Renders both the normalized-only chain and the loop-corrected chain as
-panoramas and reports canvas sizes. Reads bags read-only.
+Compares a pixel-correct normalized chain with an endpoint re-anchor.
+Only a verified endpoint match is used; no linear interpolation of
+projective matrices is attempted. Re-anchoring does not optimize the
+intermediate chain and is not a global drift correction.
 
 Usage:
     python3 stable_homography.py --bag <take>.db3 --out <prefix> [--stride 5]
@@ -26,6 +21,7 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "..", "bag-exploration"))
 from explore_bag import parse_image, COLOR  # noqa: E402
+from geometry import fit_homography, render_mosaic
 
 RANSAC, LOWE, MIN_IN = 3.0, 0.75, 20
 W, H = 640, 480
@@ -56,19 +52,9 @@ def match_h(kp_a, des_a, kp_b, des_b, matcher, normalized):
         return None, 0
     p_b = np.float32([kp_b[m.queryIdx].pt for m in good])
     p_a = np.float32([kp_a[m.trainIdx].pt for m in good])
-    if normalized:
-        T1, T2 = hartley_T(p_b), hartley_T(p_a)
-        Hn, mask = cv2.findHomography(
-            apply_T(T1, p_b).reshape(-1, 1, 2),
-            apply_T(T2, p_a).reshape(-1, 1, 2), cv2.RANSAC, RANSAC)
-        if Hn is None:
-            return None, 0
-        H = np.linalg.inv(T2) @ Hn @ T1
-    else:
-        H, mask = cv2.findHomography(p_b, p_a, cv2.RANSAC, RANSAC)
-        if H is None or mask is None:
-            return None, 0
-    return H, int(mask.sum())
+    H, mask = fit_homography(p_b, p_a, normalize=normalized,
+                             threshold_px=RANSAC, min_inliers=MIN_IN)
+    return (H, int(mask.sum())) if mask is not None else (None, 0)
 
 
 def load_frames(bag, stride):
@@ -110,27 +96,23 @@ def chain_canvas(Ts):
 
 
 def render(frames, Ts, out_path, max_px=4000):
-    bw, bh, x0, y0 = chain_canvas(Ts)
-    if bw > max_px or bh > max_px:
-        print(f"render skipped: canvas {bw:.0f} x {bh:.0f} px too large",
-              flush=True)
+    try:
+        image, stats = render_mosaic(frames, Ts, max_side=max_px)
+    except ValueError as exc:
+        print(f"render skipped: {exc}", flush=True)
         return None
-    cw, ch = int(np.ceil(bw)), int(np.ceil(bh))
-    shift = np.array([[1, 0, -x0], [0, 1, -y0], [0, 0, 1.0]])
-    acc = np.zeros((ch, cw, 3), dtype=np.float64)
-    cover = np.zeros((ch, cw), dtype=np.float64)
-    ones = np.ones((H, W), dtype=np.float64)
-    for f, T in zip(frames, Ts):
-        M = shift @ T
-        warped = cv2.warpPerspective(f, M, (cw, ch))
-        mask = cv2.warpPerspective(ones, M, (cw, ch))
-        acc += warped.astype(np.float64)
-        cover += mask
-    cover[cover == 0] = 1
-    img = (acc / cover[:, :, None]).astype(np.uint8)
-    cv2.imwrite(out_path, img)
-    print(f"wrote {out_path} {cw}x{ch}", flush=True)
-    return (cw, ch)
+    if not cv2.imwrite(out_path, image):
+        raise OSError(f"could not write {out_path}")
+    return stats["canvas_width_px"], stats["canvas_height_px"]
+
+
+def reanchor_chain(transforms, relative, first, last, measured):
+    """Use the actual loop endpoints; do not interpolate projective matrices."""
+    result = [T.copy() for T in transforms]
+    result[last] = transforms[first] @ measured
+    for k in range(last + 1, len(result)):
+        result[k] = result[k-1] @ relative[k-1]
+    return result
 
 
 def main():
@@ -140,7 +122,13 @@ def main():
     ap.add_argument("--stride", type=int, default=5)
     args = ap.parse_args()
 
+    if args.stride < 1:
+        ap.error("stride must be positive")
     frames, feats = load_frames(args.bag, args.stride)
+    if len(frames) < 2:
+        ap.error("need at least two selected frames")
+    global W, H
+    H, W = frames[0].shape[:2]
     matcher = cv2.BFMatcher()
     n = len(frames)
 
@@ -151,7 +139,7 @@ def main():
                            feats[k][0], feats[k][1], matcher, True)
         if Hm is None:
             print(f"pair {k-1}->{k} failed (inliers {inl})", flush=True)
-            return
+            return 1
         Hs.append(Hm)
         pair_inliers.append(inl)
     Ts = [np.eye(3)]
@@ -165,48 +153,30 @@ def main():
 
     # (b) loop anchor: last 5 frames vs first 5 frames
     loop = []
-    for a in range(5):
-        for b in range(n - 5, n):
+    for a in range(min(5, n)):
+        for b in range(max(0, n - 5), n):
+            if b - a < 5:
+                continue
             Hm, inl = match_h(feats[a][0], feats[a][1],
                                feats[b][0], feats[b][1], matcher, True)
             loop.append((inl, a, b, Hm))
     loop_ok = [x for x in loop if x[3] is not None]
     print("loop pairs (first5 x last5) inliers:",
           sorted([x[0] for x in loop_ok], reverse=True), flush=True)
-    best = max(loop_ok, key=lambda x: x[0])
-    inl, a, b, H_loop = best
-    print(f"best loop pair: frame {b} -> frame {a}, inliers {inl}",
-          flush=True)
-
-    # error D maps chain-predicted frame-0 coords to measured ones
-    T_end = Ts[-1]
-    D = H_loop @ np.linalg.inv(T_end)
-    D = D / D[2, 2]
-    print(f"loop error D Frobenius norm {np.linalg.norm(D - np.eye(3)):.3f}",
-          flush=True)
-    # singularity check along the interpolation path
-    min_det = min(abs(np.linalg.det((1 - t) * np.eye(3) + t * D))
-                  for t in np.linspace(0, 1, 21))
-    print(f"min |det| along correction path: {min_det:.4f}", flush=True)
-
-    corrected = None
-    if min_det > 0.05:
-        Ts_corr = []
-        for k, T in enumerate(Ts):
-            alpha = k / (n - 1)
-            C = (1 - alpha) * np.eye(3) + alpha * D
-            Ts_corr.append(C @ T)
-        bw2, bh2, _, _ = chain_canvas(Ts_corr)
-        print(f"loop-corrected chain: canvas {bw2:.0f} x {bh2:.0f} px",
-              flush=True)
-        corrected = Ts_corr
+    corrected, best_loop = None, None
+    if loop_ok:
+        inl, a, b, H_loop = max(loop_ok, key=lambda x: x[0])
+        best_loop = {"first_frame": a, "last_frame": b, "inliers": inl}
+        # H_loop maps b into a, not b into frame 0. Use the ACTUAL
+        # matched b (it need not be the last frame) and compose Ts[a].
+        corrected = reanchor_chain(Ts, Hs, a, b, H_loop)
+        print(f"re-anchored frame {b} via {a}; intermediate drift remains", flush=True)
     else:
-        print("correction path passes near a singularity; "
-              "not distributing", flush=True)
+        print("no valid non-neighbour endpoint match; normalized chain only", flush=True)
 
     render(frames, Ts, args.out + "_norm_only.png")
     if corrected is not None:
-        render(frames, corrected, args.out + "_loop_corrected.png")
+        render(frames, corrected, args.out + "_loop_reanchored.png")
 
     json.dump({
         "bag": os.path.basename(args.bag),
@@ -215,14 +185,13 @@ def main():
         "pair_inliers_min": int(min(pair_inliers)),
         "norm_only_canvas_px": [round(bw, 1), round(bh, 1)],
         "loop_pair_inliers": sorted([x[0] for x in loop_ok], reverse=True),
-        "best_loop": {"first_frame": a, "last_frame": b, "inliers": inl},
-        "loop_error_fro": float(np.linalg.norm(D - np.eye(3))),
-        "min_det_path": float(min_det),
-        "loop_corrected_canvas_px": ([round(bw2, 1), round(bh2, 1)]
-                                     if corrected is not None else None),
+        "best_loop": best_loop,
+        "correction": "endpoint_reanchor_only" if corrected is not None else None,
+        "global_drift_corrected": False,
     }, open(args.out + "_stable.json", "w"), indent=2)
     print("done", flush=True)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

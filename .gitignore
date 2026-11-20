@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+analysis/window-filter-validation/*_debug.png
+analysis/window-filter-validation/*_map.png
