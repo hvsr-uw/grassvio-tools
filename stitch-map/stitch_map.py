@@ -46,6 +46,7 @@ import hashlib
 import json
 import os
 import sqlite3
+from pathlib import Path
 import sys
 
 import cv2
@@ -68,14 +69,17 @@ LOOP_REANCHOR_MIN = 50
 LOOP_MIN_GAP = 5
 
 
-def load_frames_from_bag(bag_path):
+def load_frames_from_bag(bag_path, max_frames=0):
     """Decode all colour frames of a .db3 bag, in timestamp order."""
-    db = sqlite3.connect(f"file:{bag_path}?mode=ro", uri=True)
+    db = sqlite3.connect(Path(bag_path).resolve().as_uri() + "?mode=ro", uri=True)
     db.execute("PRAGMA query_only=ON")
     tid = db.execute("select id from topics where name=?", (COLOR,)).fetchone()[0]
-    rows = db.execute(
-        "select data from messages where topic_id=? order by timestamp",
-        (tid,)).fetchall()
+    query = "select data from messages where topic_id=? order by timestamp"
+    params = (tid,)
+    if max_frames > 0:
+        query += " limit ?"
+        params += (max_frames,)
+    rows = db.execute(query, params).fetchall()
     db.close()
     frames = []
     for (blob,) in rows:
@@ -86,10 +90,10 @@ def load_frames_from_bag(bag_path):
     return frames
 
 
-def load_frames_from_video(video_path):
+def load_frames_from_video(video_path, max_frames=0):
     cap = cv2.VideoCapture(video_path)
     frames = []
-    while True:
+    while max_frames <= 0 or len(frames) < max_frames:
         ok, frame = cap.read()
         if not ok:
             break
@@ -98,9 +102,11 @@ def load_frames_from_video(video_path):
     return frames
 
 
-def load_frames_from_folder(folder):
+def load_frames_from_folder(folder, max_frames=0):
     names = sorted(f for f in os.listdir(folder)
                    if f.lower().endswith((".png", ".jpg", ".jpeg")))
+    if max_frames > 0:
+        names = names[:max_frames]
     return [cv2.imread(os.path.join(folder, n)) for n in names]
 
 
@@ -420,13 +426,11 @@ def main():
     args = ap.parse_args()
 
     if args.bag:
-        frames = load_frames_from_bag(args.bag)
+        frames = load_frames_from_bag(args.bag, args.max_frames)
     elif args.video:
-        frames = load_frames_from_video(args.video)
+        frames = load_frames_from_video(args.video, args.max_frames)
     else:
-        frames = load_frames_from_folder(args.frames)
-    if args.max_frames:
-        frames = frames[:args.max_frames]
+        frames = load_frames_from_folder(args.frames, args.max_frames)
     if len(frames) < 2:
         print("not enough frames to stitch", file=sys.stderr)
         return 1
