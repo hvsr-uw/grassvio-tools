@@ -223,7 +223,7 @@ def place_by_tree(n, edges, frame_shape=None):
 def stitch(frames, stride, detector_name, loop_check=False, place="chain",
            lowe_ratio=LOWE_RATIO, pairs_checkpoint=None, normalize=True,
            motion_filter=False, flow_window=25, motion_residual_px=1.5,
-           camera_still=False, camera_motion=None, blend="average",
+           semantic_cues=False, camera_still=False, camera_motion=None, blend="average",
            max_side=8000, max_pixels=16_000_000, debug_out=None):
     """Fit/track, place connected frames, then warp each original once.
 
@@ -262,7 +262,8 @@ def stitch(frames, stride, detector_name, loop_check=False, place="chain",
         anchor_pose = transforms[0]
         for start, end, H, record in flow_pairs(
                 grays, flow_window, motion_residual_px, camera_still,
-                camera_motion, MIN_INLIERS, normalize):
+                camera_motion, MIN_INLIERS, normalize,
+                semantic_images=frames if semantic_cues else None):
             T = None
             if anchor_pose is not None and H is not None:
                 candidate = anchor_pose @ H
@@ -369,6 +370,7 @@ def stitch(frames, stride, detector_name, loop_check=False, place="chain",
              "tree_edges": tree_edges, "pairs_from_checkpoint": pairs_from_checkpoint,
              "motion_filter": motion_filter, "flow_window": flow_window if motion_filter else None,
              "motion_residual_px": motion_residual_px if motion_filter else None,
+             "semantic_cues": bool(semantic_cues) if motion_filter else False,
              "windows": window_stats, "pairs": pair_stats,
              "selected_frames": chosen,
              "transforms_to_first": [T.tolist() if T is not None else None for T in transforms]}
@@ -427,6 +429,8 @@ def main():
     ap.add_argument("--motion-filter", action="store_true")
     ap.add_argument("--flow-window", type=int, default=25)
     ap.add_argument("--motion-residual-px", type=float, default=1.5)
+    ap.add_argument("--semantic-cues", action="store_true",
+                    help="use vegetation colour cues together with temporal residuals")
     camera = ap.add_mutually_exclusive_group()
     camera.add_argument("--camera-still", action="store_true",
                         help="known stationary ACQUISITION, not inferred from low gyro")
@@ -460,6 +464,7 @@ def main():
                                lowe_ratio=args.lowe_ratio, pairs_checkpoint=ckpt,
                                normalize=args.normalize, motion_filter=args.motion_filter,
                                flow_window=args.flow_window, motion_residual_px=args.motion_residual_px,
+                               semantic_cues=args.semantic_cues,
                                camera_still=args.camera_still, camera_motion=camera_motion,
                                blend=args.blend, max_side=args.max_side, max_pixels=args.max_pixels,
                                debug_out=args.debug_out)
