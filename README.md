@@ -114,6 +114,65 @@ values matching the input image resolution. The input images must already
 be undistorted. This script selects candidate pairs; it does not run a full
 SfM reconstruction or recover metric scale.
 
+## Real recording checks
+
+I added a batch runner for the original camera videos. It runs the
+descriptor homography and the 25-frame filtered homography separately, and
+records which frames were placed, which failed, and what the fitting
+diagnostics showed. I keep the raw videos, maps and logs on my own machine.
+
+I use this command after putting the original recordings in a local folder:
+
+```bash
+python scripts/run_recording_batch.py \
+  --input-dir recordings --output-dir local-results \
+  --manifest recording-evidence.json --debug-images
+```
+
+It writes `summary.json` and `summary.csv` plus a separate image,
+statistics file, log and restart checkpoint for each recording and method.
+If I rerun the same settings, the script skips stages that already finished.
+It reruns a stage when its input file, relevant code or settings change.
+I can use `--dry-run` to list the files and `--rerun` to ignore checkpoints.
+
+The optional manifest lists the camera evidence for each video. For a video
+that only **starts** stationary, I do not label its entire run stationary:
+
+```json
+{
+  "recordings": {
+    "example.db3": {
+      "camera_mode": "visual_plane_only",
+      "starts_at_rest": true
+    }
+  }
+}
+```
+
+The `known_stationary_whole_recording` mode requires independent
+confirmation that the camera stayed stationary throughout the full video.
+The `independent_full_motion` mode requires a path to one
+full camera-motion pixel homography for every frame, including translation.
+Without either, the filter fits a visual-plane model from the imagery, so
+it cannot independently identify moving grass or measure camera truth.
+
+For each filtered window I fit two **separate diagnostic homographies** from
+checkerboard training areas: before and after temporal filtering. I measure
+both on tracked points in the other checkerboard areas. The test points do
+not enter either diagnostic fit or the temporary plane estimate used for
+filtering. I keep the normal full-data transform used for map placement
+unchanged. The per-window held-out error is still image consistency rather
+than ground-truth camera pose, so lower error does not prove wind detection
+or agreement among the motion channels.
+
+I checked the batch runner and held-out diagnostic with seven focused
+tests using generated and mocked inputs. I have not repeated the full
+three-channel comparison with this new runner on the original `.db3` files
+in the current workspace. The earlier recorded results do not replace
+that check. In particular, a quiet first second can help initialize
+velocity, but does not by itself establish accelerometer bias, gravity
+orientation or long-term metric translation.
+
 ## Other scripts and earlier results
 
 I use `bag-exploration/explore_bag.py` to read the ROS 2 SQLite recordings
