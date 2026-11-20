@@ -22,6 +22,7 @@ param(
     [int]$MaxFrames = 300,
 
     [switch]$SkipCopy,
+    [switch]$UseSourceInPlace,
     [switch]$SkipInstall,
     [switch]$DryRun
 )
@@ -32,16 +33,19 @@ Set-StrictMode -Version Latest
 $branch = 'codex/nov20-recording-validation-runner'
 $repoUrl = 'https://github.com/hvsr-uw/grassvio-tools.git'
 $repo = Join-Path $WorkDir 'tools'
-$inputDir = Join-Path $WorkDir 'recordings'
-$outputDir = Join-Path $WorkDir 'results'
 $source = (Resolve-Path -LiteralPath $SourceDir -ErrorAction Stop).Path
-$null = New-Item -ItemType Directory -Force -Path $WorkDir, $inputDir, $outputDir
+$inputDir = if ($UseSourceInPlace) { $source } else { Join-Path $WorkDir 'recordings' }
+$outputDir = Join-Path $WorkDir 'results'
+$null = New-Item -ItemType Directory -Force -Path $WorkDir, $outputDir
+if (-not $UseSourceInPlace) {
+    $null = New-Item -ItemType Directory -Force -Path $inputDir
+}
 
 Write-Host "GrassVIO local workspace: $WorkDir"
 Write-Host "Source: $source"
 Write-Host "Data stays on this computer. No Box or GitHub uploads."
 
-if (-not $SkipCopy) {
+if (-not $SkipCopy -and -not $UseSourceInPlace) {
     $selected = @(Get-ChildItem -LiteralPath $source -File -Recurse -Filter '*.db3' |
                   Where-Object { $_.Name -match $NamePattern })
     if ($selected.Count -eq 0) {
@@ -86,6 +90,9 @@ if (-not $SkipCopy) {
     exit 0
 }
 
+if ($UseSourceInPlace) {
+    Write-Host 'Using the source folder in place. Ensure Box Drive files are available offline.'
+}
 $recordings = @(Get-ChildItem -LiteralPath $inputDir -File -Filter '*.db3' |
                 Where-Object { $_.Name -match $NamePattern })
 if ($recordings.Count -eq 0) {
