@@ -135,8 +135,14 @@ For an independently known stationary recording:
 
 ```bash
 python stitch-map/stitch_map.py --bag stationary.db3 --out filtered.png \
-  --motion-filter --flow-window 25 --camera-still --debug-out debug.png
+  --motion-filter --flow-window 25 --camera-still --semantic-cues \
+  --debug-out debug.png
 ```
+
+The optional --semantic-cues flag combines the colour-based vegetation
+cue with the temporal residual. It is intentionally conservative: colour
+alone never rejects a point, and the output does not claim that the
+residual was caused by wind.
 
 For a moving camera, replace `--camera-still` with
 `--camera-motion motion.json`. The file holds one pixel homography per input
