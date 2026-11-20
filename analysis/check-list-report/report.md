@@ -1,5 +1,10 @@
 check list results
 
+This is the historical checklist. The November 20 rerun, synchronized XYZ
+figures and current limitations are in [the recorded-motion validation
+report](../jinming-validation/report.md). The figures and CSV beside this
+historical report retain the settings and results from their original runs.
+
 1. methods
 
 inlier rate: sift matching on stride 5 frame pairs, lowe ratio 0.75, ransac at 3.0 px, inliers over good matches. 14 takes, 505 pairs.

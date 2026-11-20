@@ -73,3 +73,22 @@ def test_flow_pairs_rejects_mismatched_semantic_sequence():
     gray = np.zeros((40, 40), dtype=np.uint8)
     with pytest.raises(ValueError, match="semantic image sequence"):
         list(flow_pairs([gray] * 3, semantic_images=[cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)]))
+
+
+def test_semantic_filter_can_actually_change_flow_selection(monkeypatch):
+    import window_motion
+    # One point moves 1.3 px: passes the ordinary 1.5 px gate but should
+    # fail the vegetation-specific 1.125 px gate. A rigid green point stays.
+    xy = np.array([[10., 10.], [20., 10.], [30., 10.], [10., 20.],
+                   [20., 20.], [30., 20.]])
+    history = np.repeat(xy[None], 3, axis=0)
+    history[1:, 0, 0] += 1.3
+    monkeypatch.setattr(window_motion, 'track_window', lambda _: (history, len(xy)))
+    gray = np.zeros((40, 40), np.uint8)
+    green = np.full((40, 40, 3), (0, 255, 0), np.uint8)
+    ordinary = list(flow_pairs([gray]*3, camera_still=True, min_inliers=4))[0][3]
+    semantic = list(flow_pairs([gray]*3, camera_still=True, min_inliers=4,
+        semantic_images=[green]*3))[0][3]
+    assert ordinary['prefilter_kept'] == 6
+    assert semantic['prefilter_kept'] == 5
+    assert semantic['semantic_rejected'] == 1

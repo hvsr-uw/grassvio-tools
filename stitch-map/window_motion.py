@@ -100,7 +100,8 @@ def temporal_filter(history, camera_models=None, residual_threshold_px=1.5):
 def flow_pairs(grays, window=25, residual_threshold_px=1.5, camera_still=False,
                camera_motion=None, min_inliers=20, normalize=True,
                reject_full_frame_horizon=True, track_observer=None,
-               semantic_images=None, semantic_vegetation_threshold=0.35):
+               semantic_images=None, semantic_vegetation_threshold=0.35,
+               semantic_residual_ratio=0.75):
     """Yield next->anchor H and diagnostics, once per completed window.
 
     Consumes every intermediate frame for flow and re-detects at anchors.
@@ -115,6 +116,8 @@ def flow_pairs(grays, window=25, residual_threshold_px=1.5, camera_still=False,
         raise ValueError("camera motion length differs from input frames")
     if semantic_images is not None and len(semantic_images) != len(grays):
         raise ValueError("semantic image sequence length differs from input frames")
+    if not 0 < semantic_residual_ratio <= 1:
+        raise ValueError("semantic residual ratio must be in (0, 1]")
     mode = "known_stationary" if camera_still else ("independent_full_motion" if camera_motion is not None else "visual_plane_only")
     for start in range(0, len(grays) - 1, window):
         end = min(start + window, len(grays) - 1)
@@ -132,7 +135,7 @@ def flow_pairs(grays, window=25, residual_threshold_px=1.5, camera_still=False,
             semantic_keep, _ = semantic_motion_keep(
                 vegetation, scores,
                 vegetation_threshold=semantic_vegetation_threshold,
-                residual_threshold_px=residual_threshold_px)
+                residual_threshold_px=residual_threshold_px*semantic_residual_ratio)
             semantic_rejected = int(np.count_nonzero(keep & ~semantic_keep))
             keep &= semantic_keep
         H, mask = fit_homography(history[-1, keep], history[0, keep],
@@ -149,6 +152,8 @@ def flow_pairs(grays, window=25, residual_threshold_px=1.5, camera_still=False,
                  "prefilter_kept": int(keep.sum()),
                  "prefilter_rejected": int(len(keep) - keep.sum()),
                  "semantic_rejected": semantic_rejected,
+                 "semantic_residual_threshold_px":(residual_threshold_px*semantic_residual_ratio
+                     if semantic_images is not None else None),
                  "median_temporal_residual_px": float(np.median(finite)) if len(finite) else None,
                  "inliers": int(mask.sum()) if mask is not None else 0,
                  "camera_evidence": mode, "ok": H is not None,

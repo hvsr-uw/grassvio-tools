@@ -79,6 +79,39 @@ independent IMU translation prior.
 The detailed historical checklist is in
 [check-list-report/report.md](analysis/check-list-report/report.md).
 
+## Synchronized motion and drift figures
+
+I recheck each recording with the latest channel code and generate XYZ
+translation and rotation, temporal IMU averaging, common-interval Fig. 6
+comparisons, and drift plots. The five-sample average smooths each sensor
+axis over time. The plots preserve the camera frame and metric scale;
+rotation plots break lines at angle-axis branch cuts to avoid false
+motion jumps. Gravity samples from a later quiet window are rotated into
+the starting camera frame. Visual velocity initialization subtracts the
+measured acceleration contribution before estimating initial velocity.
+
+The optional vegetation cue uses a stricter residual gate (1.125 px by
+default) than the ordinary flow gate (1.5 px). This allows it to affect
+selection; both thresholds still need independent calibration. The final
+runner measures its effect separately from the previously fitted visual
+poses, so the SfM reconstruction is not presented as a semantic ablation.
+
+```bash
+python -m pip install -r requirements-analysis.txt
+python scripts/run_jinming_validation.py --input-dir recordings --recovery-dir local-results/recovery --multiview-dir local-results/multiview --output-dir local-results/jinming-final
+python scripts/summarize_jinming_validation.py --input-dir local-results/jinming-final --publish-dir analysis/jinming-validation
+```
+
+The runner reuses existing visual tracks and SfM only after verifying that
+the newly measured RGB-D poses match the original reconstruction inputs.
+It also evaluates IMU predictions initialized from previous visual poses
+against a constant-velocity baseline before observing the next camera
+position. This exposes the effect of visual drift resets without counting
+the reset observation as a successful prediction. Full traces, CSV files
+and PNG/SVG/PDF figures remain in the chosen local output directory.
+The measured results and limitations are in the
+[recorded-motion validation report](analysis/jinming-validation/report.md).
+
 ## Homography and motion filtering
 
 I fixed the normalized homography threshold so the inlier cutoff stays at

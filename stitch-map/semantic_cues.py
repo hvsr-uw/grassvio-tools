@@ -2,7 +2,7 @@
 
 This module deliberately does not claim to be a learned semantic
 segmentation model. It produces an auditable vegetation likelihood from
-colour and local texture, then combines it with the temporal motion residual.
+colour, then combines it with the temporal motion residual.
 The cue is only allowed to reject a point when both signals agree: a point
 must look vegetation-like and violate the fitted camera model. This keeps a
 green but rigid surface usable and avoids treating colour alone as proof of

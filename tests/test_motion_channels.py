@@ -2,7 +2,8 @@ import cv2
 import numpy as np
 import pytest
 from motion_channels import (estimate_pnp, inertial_path, angle, reconnect_component,
-                             fit_anchor_loop, estimate_static_window)
+                             fit_anchor_loop, estimate_static_window,
+                             velocity_from_visual_displacement)
 
 
 def test_pnp_recovers_target_from_source_metric_pose():
@@ -85,3 +86,34 @@ def test_inertial_path_accepts_a_visual_initial_velocity():
     )
     np.testing.assert_allclose(path[int(times[-1])][1], [2., 0., 0.], atol=1e-10)
     assert init["initial_camera_velocity"] == "provided_visual_reference"
+
+
+def test_later_static_gravity_is_transported_to_start_orientation():
+    times = np.arange(401, dtype=np.int64)*5_000_000
+    seconds = times/1e9
+    # Rotate for one second, then stop. There is no linear acceleration.
+    speed = np.where(seconds < 1., .6, 0.)
+    theta = np.r_[0., np.cumsum((speed[:-1]+speed[1:])*.5*.005)]
+    gyro = np.column_stack([np.zeros(len(times)), np.zeros(len(times)), speed])
+    gravity = np.array([0., 9.81, 0.])
+    accel = np.array([-cv2.Rodrigues(np.array([0., 0., a]))[0].T@gravity for a in theta])
+    path, init = inertial_path(times, gyro, times, accel, times[[0, 200, 400]],
+        np.eye(3), np.eye(3), np.zeros(3), np.zeros(3),
+        gravity_window={'start_ns': 1_200_000_000, 'end_ns': 1_800_000_000})
+    np.testing.assert_allclose(init['gravity_vector'], gravity, atol=1e-10)
+    np.testing.assert_allclose(path[int(times[-1])][1], 0., atol=1e-10)
+
+
+def test_visual_velocity_subtracts_acceleration_and_lever_contribution():
+    # At t=2, v0=1 and acceleration=2 give displacement 6, not v0=3.
+    np.testing.assert_allclose(velocity_from_visual_displacement([6., 0., 0.],
+        [4., 0., 0.], 2.), [1., 0., 0.])
+
+
+def test_continuously_rotating_recording_is_not_a_static_bias_candidate():
+    times = np.arange(201, dtype=np.int64)*5_000_000
+    gyro = np.tile([0., 0., .3], (len(times), 1))
+    accel = np.tile([0., -9.81, 0.], (len(times), 1))
+    window = estimate_static_window(times, gyro, times, accel)
+    assert not window['low_motion_candidate']
+    assert not window['stationary_verified']
