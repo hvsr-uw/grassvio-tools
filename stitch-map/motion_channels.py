@@ -118,7 +118,8 @@ def estimate_static_window(gts, gyro, ats, accel, window_seconds=0.5, min_sample
         am = np.linalg.norm(accel[(ats >= start) & (ats <= end)], axis=1)
         if len(gm) < min_samples or len(am) < min_samples:
             continue
-        gyro_score = float(np.median(gm))
+        # Mean magnitude penalizes a window that overlaps a moving segment.
+        gyro_score = float(np.mean(gm))
         accel_mad = float(np.median(np.abs(am - np.median(am))))
         candidate = (gyro_score + accel_mad, int(start), end,
                      gyro_score, accel_mad, len(gm), len(am))
