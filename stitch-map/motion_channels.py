@@ -40,6 +40,7 @@ def estimate_pnp(points3d,target_rays,focal):
     predicted=(points3d[indices]@r.T+tv.ravel())
     err=np.linalg.norm(predicted[:,:2]/predicted[:,2:]-target_rays[indices,:2],axis=1)*focal
     return t,{"status":"estimated","depth_matches":len(points3d),"inliers":len(indices),
+              "inlier_rate":float(len(indices)/len(points3d)) if len(points3d) else 0.0,
               "median_reprojection_error_px":float(np.median(err))}
 
 
