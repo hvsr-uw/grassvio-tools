@@ -26,6 +26,22 @@ The two panels show the actual image coordinates of those 392 matches. The color
 
 Across the 50 short pairs, the temporal check removed 7,101 matches after the flow check. Of those, 2,695 had passed the original RANSAC fit.
 
+## Linked matches on the original frames
+
+![Frames 195 and 200 with lines connecting matching features](173701_linked_matches_frames_195_200.png)
+
+Green passed both checks, orange failed the temporal check, and blue failed the flow check. The figure shows seven pairs from each group so the lines are readable. The legend gives the full counts among matches accepted by the original RANSAC fit.
+
+[Exact frame-pair decisions](173701_matches_195_200.npz) · [Audit and figure script](../../../scripts/inspect_wind_matches.py)
+
+To recreate the figure, run this from the repository root with Python, NumPy, OpenCV, and the team's original recording in `recordings/`.
+
+```sh
+python scripts/inspect_wind_matches.py --bag recordings/20261026_173701.db3 --matches-npz analysis/check-list-report/wind-pre-ransac-173701/173701_matches_195_200.npz --pair 195 200 --output-dir local-results/wind-173701
+```
+
+Use the same script with just `--bag` and `--output-dir` to rerun the audit on all frame pairs.
+
 ## Longer windows
 
 | Frame spacing | Windows scored by all three fits | SIFT only | Flow check | Flow and temporal filter | Fits available before / after filtering |
