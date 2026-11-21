@@ -75,6 +75,37 @@ python stitch-map/sfm_spacing_plane_check.py \
   --gaps 5 25 50 --anchor-step 50
 ```
 
+## Known-pose synthetic check
+
+I also ran a small simulation to isolate the effect of changing the baseline.
+I used 600 image points around 4 m from the camera, 600-pixel focal length,
+and 0.2-pixel Gaussian noise per image observation. The camera moves 4 mm and
+rotates 0.1 degree per simulated frame. For the second surface I vary each
+point's height by up to 0.4 m. I use the **true camera poses** for
+triangulation here, so the 3D error tests baseline conditioning, not how well
+the full SfM system estimates camera movement.
+
+| Surface | Frame gap | Translation | True parallax | Held-out plane error | Known-pose 3D error |
+|---|---:|---:|---:|---:|---:|
+| Flat | 5 | 0.02 m | 0.271° | 0.373 px | 0.277 m |
+| Flat | 25 | 0.10 m | 1.350° | 0.350 px | 0.056 m |
+| Flat | 50 | 0.20 m | 2.690° | 0.362 px | 0.027 m |
+| Uneven | 5 | 0.02 m | 0.267° | 0.370 px | 0.275 m |
+| Uneven | 25 | 0.10 m | 1.334° | 0.790 px | 0.056 m |
+| Uneven | 50 | 0.20 m | 2.658° | 1.823 px | 0.027 m |
+
+On the flat surface, the plane model stays close to the measurement noise
+at every gap. On the uneven surface, the wide-gap homography becomes worse
+because parallax exposes the varying depths. Meanwhile, with the true
+camera poses, the wider baseline cuts median 3D triangulation error sharply.
+These are synthetic measurements, not results from the grass recordings.
+
+I can rerun this control with:
+
+```bash
+python scripts/run_sfm_spacing_synthetic_controls.py --out local-results/sfm-spacing/synthetic.json
+```
+
 ## How I interpret the result
 
 I compare the fraction of attempted pairs that retain enough matches,
@@ -101,7 +132,7 @@ those numbers from the existing multiview report.
   holdout, homography fitting, parallax test and optional SfM pose check.
 - `scripts/run_sfm_spacing_plane_check.py`: deterministic batch runner and
   combined result tables.
-- `tests/test_sfm_spacing_plane_check.py`: synthetic plane and 3D controls,
+- `scripts/run_sfm_spacing_synthetic_controls.py`: known-pose conditioning control.\n- `tests/test_sfm_spacing_synthetic_controls.py`: conditioning and plane checks.\n- `tests/test_sfm_spacing_plane_check.py`: synthetic plane and 3D controls,
   rotation-only and tiny-translation rejection, missing matches and pose
   comparison checks.
 
