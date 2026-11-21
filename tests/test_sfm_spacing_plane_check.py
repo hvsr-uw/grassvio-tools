@@ -103,3 +103,39 @@ def test_summary_counts_supported_pairs_without_inventing_missing_results():
     assert result["25"]["sfm_pose_pairs"] == 1
     assert result["50"]["evaluated_pairs"] == 0
     assert result["50"]["median_plane_holdout_px"] is None
+
+
+def test_recording_runner_writes_pair_and_summary_tables(tmp_path, monkeypatch):
+    import json
+    import sfm_spacing_plane_check as spacing
+
+    class FakeRecording:
+        def __init__(self, path):
+            self.color_times = np.arange(101, dtype=np.int64) * 33_333_333
+            self.color = {"fx": 600., "fy": 600., "ppx": 320., "ppy": 240.,
+                          "width": 640, "height": 480, "coeffs": [0.] * 5,
+                          "model": "None"}
+
+        def image(self, topic, index):
+            return np.full((4, 4, 3), index, dtype=np.uint8)
+
+        def close(self):
+            pass
+
+    def matches(first_image, second_image):
+        first, second = int(first_image[0, 0, 0]), int(second_image[0, 0, 0])
+        _, _, raw_a, _, _ = synthetic_matches(tx=.005 * (second - first))
+        source, target, _, _, _ = synthetic_matches(tx=.005 * (second - first))
+        return raw_a, target + [320., 240.]
+
+    monkeypatch.setattr(spacing, "Recording", FakeRecording)
+    monkeypatch.setattr(spacing, "match_frames", matches)
+    output = tmp_path / "comparison.json"
+    result = spacing.run(tmp_path / "sample.db3", output, [5, 25], 50)
+    saved = json.loads(output.read_text())
+    assert len(result["pairs"]) == 4
+    assert len(saved["pairs"]) == 4
+    assert saved["summary"]["5"]["evaluated_pairs"] == 2
+    assert saved["summary"]["25"]["evaluated_pairs"] == 2
+    assert saved["metric_ground_truth_available"] is False
+    assert output.with_suffix(".csv").read_text().count("\n") == 5
