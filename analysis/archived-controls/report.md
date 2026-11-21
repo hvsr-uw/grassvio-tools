@@ -34,7 +34,13 @@ The median RGB-D translation magnitude is 3.758 mm per adjacent interval, and it
 
 The quietest 0.5 s window still has a mean gyro magnitude of 0.211 rad/s, so it fails the low-motion gate. I do not subtract the video-wide mean gyro as if it were sensor bias. The raw-IMU translation diagnostic carries velocity across intervals but starts at assumed zero velocity and uses an offline gravity heuristic. It is not a validated camera trajectory.
 
-The raw September recording is now available for analysis. The original report and exact plotting implementation are still needed to identify the quantity behind its Fig. 6 curves. These new measurements do not settle that provenance.
+The raw September recording and the original midterm report are now available
+for analysis. The report confirms the original Fig. 6 recording, 53-pair count,
+descriptor set, 2 px RANSAC threshold, units, and conversion of IMU motion into
+the colour frame. The recovered code archive does not contain the original
+plotting implementation, so the exact quantity behind the curves is still not
+reproducible. The source-level audit is in
+`analysis/fig6-provenance/report.md`.
 
 ## Short-recording initialization
 
@@ -51,4 +57,9 @@ python -m pytest -q tests
 
 Each local `controls.json` contains the input SHA-256, full interval list, depth offsets, relative transforms, filter counts and scoring definitions. The repository summary contains aggregates and input hashes. Recordings and detailed motion traces remain outside the repository.
 
-Independent motion accuracy and physical wind validation remain unresolved. I still need independently measured camera motion and labelled stationary/moving vegetation controls to make those claims.
+The matching simulation archive was also inspected. It has synthetic visual
+pose records, but all 330 accelerometer samples are exactly gravity-only
+`[0, 0, -9.80665]` m/s^2, so it cannot provide independent inertial translation
+ground truth. Independent motion accuracy and physical wind validation remain
+unresolved; they still require independently measured camera motion and labelled
+stationary/moving vegetation controls.

@@ -38,7 +38,17 @@ The local IMU prediction improves the baseline on 6/6 recordings. This evaluates
 
 Each new `fig6_common_intervals` figure compares the exact same recorded source and target frames. Every translation is a source-to-target camera-transform vector in metres. Rotation uses rotation vectors in degrees. RGB-D uses recorded calibration and depth registration; SfM gets one metric scale from initial depth. The figures use a common y scale within each row. Unsupported visual intervals remain absent.
 
-The older Fig. 6 used the September 26 video ending in 155419. I have recovered that raw recording and measured its adjacent frame pairs in [the archived-control report](../archived-controls/report.md). The exact original plotting trace remains unavailable, so these November 19 figures are replacements, not a numerical reproduction of that earlier figure. The repository does contain a separate `imu_fusion.py::imu_distance` diagnostic that resets velocity for every interval and demeans acceleration by the video mean. This can produce tiny acceleration-only displacements even during steady translation, but its existence does not establish that it generated the original Fig. 6.
+The older Fig. 6 used the September 26 video ending in 155419. I recovered the
+original report, which confirms 53 consecutive pairs, ORB/SIFT/HOG/BFM, a 2 px
+RANSAC threshold, metre translation magnitudes, and conversion of IMU motion
+into the colour frame. The recovered code archive does not include the original
+plotting script, so these November 19 figures are replacements rather than a
+numerical reproduction. The full source audit is in
+[the Fig. 6 provenance report](../fig6-provenance/report.md). The repository
+also contains a separate `imu_fusion.py::imu_distance` diagnostic that resets
+velocity for every interval and demeans acceleration by the video mean. This
+can produce tiny acceleration-only displacements even during steady translation,
+but its existence does not establish that it generated the original Fig. 6.
 
 The archived preintegration study for the same 155419 take gives a 1.097 m endpoint displacement when carrying velocity and 0.078 m when resetting it, a factor of 14.1. That archive uses ten stride-five pairs rather than the original figure's 53 pairs. It demonstrates sensitivity to the velocity definition without establishing the provenance or correctness of the original figure. The archived numbers are in `analysis/audit-imu-preint/runs/20260926_155419_preint.json`.
 
@@ -67,4 +77,11 @@ Detailed local deliverables are `motion_report.json`, `interval_motion.csv`, fou
 
 ## What remains unresolved
 
-Independent inertial translation remains unvalidated. The older Fig. 6 still needs its original plotting provenance to establish its exact cause; its source recording has now been recovered. Absolute rotation/translation accuracy and wind-specific detection require independent reference motion and labelled controls. The current results support gyro rotation calibration and measured visual-aided prediction checks, with those limits.
+Independent inertial translation remains unvalidated. The original Fig. 6
+provenance is narrowed to the report-level definition, but its plotting code is
+not in the recovered archive. The matching simulation archive has pose ground
+truth for synthetic images but gravity-only acceleration, so it cannot close
+the inertial translation gap. Absolute rotation/translation accuracy and
+wind-specific detection still require independent reference motion and labelled
+controls. The current results support gyro rotation calibration and measured
+visual-aided prediction checks, with those limits.

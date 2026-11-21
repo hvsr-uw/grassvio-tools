@@ -418,5 +418,15 @@ explicit, score temporal and colour filtering on held-out image tiles, and
 do not label any recording as wind or stationary without independent motion
 evidence.
 
+I recovered the original midterm report and checked its Fig. 6 definition. It
+uses 53 consecutive pairs from `20260926_155419`, ORB/SIFT/HOG/BFM visual
+estimates, a 2 px RANSAC threshold, metre translation magnitudes, and IMU motion
+converted into the colour frame. The original plotting script is not present in
+the recovered code archive, so the exact numerical implementation remains
+unreproducible. The matching simulation archive has synthetic pose records but
+gravity-only accelerometer samples, so it cannot serve as independent inertial
+translation ground truth. See
+[analysis/fig6-provenance/report.md](analysis/fig6-provenance/report.md).
+
 I keep the related-work findings in
 [motion-filter-related-work.md](research/motion-filter-related-work.md).

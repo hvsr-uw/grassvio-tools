@@ -1,0 +1,12 @@
+{
+  "archive": "sim_20260926_155419",
+  "ground_truth_records": 110,
+  "source_target_pairs": 55,
+  "source_frame_range": [0, 54],
+  "accelerometer_samples": 330,
+  "accelerometer_unique_vectors": [[0.0, 0.0, -9.80665]],
+  "accelerometer_non_gravity_samples": 0,
+  "gyro_samples": 770,
+  "independent_translation_ground_truth": false,
+  "reason": "The image pose records contain synthetic motion, but the accelerometer stream contains gravity only."
+}

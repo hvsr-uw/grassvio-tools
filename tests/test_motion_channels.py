@@ -88,6 +88,24 @@ def test_inertial_path_accepts_a_visual_initial_velocity():
     assert init["initial_camera_velocity"] == "provided_visual_reference"
 
 
+def test_inertial_path_matches_known_constant_acceleration():
+    # The first half-second is a measured static window. The camera then has
+    # 1 m/s^2 of known acceleration for 1.5 s, so the metric displacement is
+    # 0.5 * 1 * 1.5^2 = 1.125 m.
+    times = np.arange(401, dtype=np.int64) * 5_000_000
+    gyro = np.zeros((len(times), 3))
+    accel = np.tile([0., -9.81, 0.], (len(times), 1))
+    accel[times >= 500_000_000, 0] = 1.
+    path, init = inertial_path(
+        times, gyro, times, accel, times[[0, 100, 400]], np.eye(3), np.eye(3),
+        np.zeros(3), np.zeros(3),
+        gravity_window={"start_ns": 0, "end_ns": 500_000_000},
+        initial_velocity=np.zeros(3),
+    )
+    np.testing.assert_allclose(path[int(times[-1])][1], [1.125, 0., 0.], atol=2e-5)
+    assert init["accelerometer_bias_separately_estimated"] is False
+
+
 def test_later_static_gravity_is_transported_to_start_orientation():
     times = np.arange(401, dtype=np.int64)*5_000_000
     seconds = times/1e9
