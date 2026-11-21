@@ -75,6 +75,23 @@ python stitch-map/sfm_spacing_plane_check.py \
   --gaps 5 25 50 --anchor-step 50
 ```
 
+## Windows local runner
+
+I can run the recovery, multiview reconstruction, near/far comparison and
+synthetic control from one PowerShell command. It checks out this SfM review
+branch into a separate local workspace so it does not change the older
+GrassVIO runner. The `-UseSourceInPlace` option reads Box files already
+available offline, without copying the large recordings:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_sfm_spacing_windows.ps1 -SourceDir "recordings" -UseSourceInPlace
+```
+
+The runner writes its outputs under the local SfM workspace. Stage scripts
+reuse their completed checkpoints when the source and inputs still match.
+For a rerun after those outputs already exist, I can add `-OnlySpacing` to
+repeat just the spacing experiment. It never uploads recordings or results.
+
 ## Known-pose synthetic check
 
 I also ran a small simulation to isolate the effect of changing the baseline.
@@ -133,6 +150,7 @@ those numbers from the existing multiview report.
 - `scripts/run_sfm_spacing_plane_check.py`: deterministic batch runner and
   combined result tables.
 - `scripts/run_sfm_spacing_synthetic_controls.py`: known-pose conditioning control.
+- `scripts/run_sfm_spacing_windows.ps1`: local Windows runner with checkpoint reuse.
 - `tests/test_sfm_spacing_synthetic_controls.py`: conditioning and plane checks.
 - `tests/test_sfm_spacing_plane_check.py`: synthetic plane and 3D controls,
   rotation-only and tiny-translation rejection, missing matches and pose
