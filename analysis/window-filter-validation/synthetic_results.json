@@ -1,0 +1,135 @@
+{
+  "opencv_version": "4.14.0",
+  "numpy_version": "2.3.5",
+  "seed": 566,
+  "window_frames": 25,
+  "residual_threshold_px": 1.5,
+  "camera_prior": "known synthetic full camera motion, including translation",
+  "real_recordings_tested": false,
+  "cases": [
+    {
+      "case": "camera_still_grass_static",
+      "synthetic_only": true,
+      "detected": 813,
+      "complete_tracks": 813,
+      "kept": 813,
+      "static_control_tracks": 212,
+      "static_kept_fraction": 1.0,
+      "grass_interior_tracks": 329,
+      "grass_rejected_fraction": 0.0,
+      "unfiltered_homography_error_px": 3.2217900811716156e-14,
+      "filtered_homography_error_px": 3.2217900811716156e-14,
+      "windows": [
+        {
+          "start_frame": 0,
+          "end_frame": 25,
+          "window_frames": 25,
+          "features_detected": 813,
+          "complete_tracks": 813,
+          "prefilter_kept": 813,
+          "prefilter_rejected": 0,
+          "median_temporal_residual_px": 0.0,
+          "inliers": 813,
+          "camera_evidence": "known_stationary",
+          "ok": true,
+          "wind_cause_verified": false,
+          "placed": true
+        }
+      ],
+      "frames_used": 2
+    },
+    {
+      "case": "camera_still_grass_moving",
+      "synthetic_only": true,
+      "detected": 813,
+      "complete_tracks": 813,
+      "kept": 317,
+      "static_control_tracks": 212,
+      "static_kept_fraction": 1.0,
+      "grass_interior_tracks": 329,
+      "grass_rejected_fraction": 1.0,
+      "unfiltered_homography_error_px": 9.762409592661278,
+      "filtered_homography_error_px": 0.18384761094457072,
+      "windows": [
+        {
+          "start_frame": 0,
+          "end_frame": 25,
+          "window_frames": 25,
+          "features_detected": 813,
+          "complete_tracks": 813,
+          "prefilter_kept": 317,
+          "prefilter_rejected": 496,
+          "median_temporal_residual_px": 5.093392431435816,
+          "inliers": 317,
+          "camera_evidence": "known_stationary",
+          "ok": true,
+          "wind_cause_verified": false,
+          "placed": true
+        }
+      ],
+      "frames_used": 2
+    },
+    {
+      "case": "camera_moving_grass_static",
+      "synthetic_only": true,
+      "detected": 813,
+      "complete_tracks": 800,
+      "kept": 800,
+      "static_control_tracks": 199,
+      "static_kept_fraction": 1.0,
+      "grass_interior_tracks": 329,
+      "grass_rejected_fraction": 0.0,
+      "unfiltered_homography_error_px": 0.006976040744839307,
+      "filtered_homography_error_px": 0.006976040744839307,
+      "windows": [
+        {
+          "start_frame": 0,
+          "end_frame": 25,
+          "window_frames": 25,
+          "features_detected": 813,
+          "complete_tracks": 800,
+          "prefilter_kept": 800,
+          "prefilter_rejected": 0,
+          "median_temporal_residual_px": 0.020334133863452106,
+          "inliers": 800,
+          "camera_evidence": "independent_full_motion",
+          "ok": true,
+          "wind_cause_verified": false,
+          "placed": true
+        }
+      ],
+      "frames_used": 2
+    },
+    {
+      "case": "camera_moving_grass_moving",
+      "synthetic_only": true,
+      "detected": 813,
+      "complete_tracks": 788,
+      "kept": 307,
+      "static_control_tracks": 198,
+      "static_kept_fraction": 1.0,
+      "grass_interior_tracks": 318,
+      "grass_rejected_fraction": 1.0,
+      "unfiltered_homography_error_px": 9.58199342866948,
+      "filtered_homography_error_px": 0.23402494548880962,
+      "windows": [
+        {
+          "start_frame": 0,
+          "end_frame": 25,
+          "window_frames": 25,
+          "features_detected": 813,
+          "complete_tracks": 788,
+          "prefilter_kept": 307,
+          "prefilter_rejected": 481,
+          "median_temporal_residual_px": 5.18988637430696,
+          "inliers": 307,
+          "camera_evidence": "independent_full_motion",
+          "ok": true,
+          "wind_cause_verified": false,
+          "placed": true
+        }
+      ],
+      "frames_used": 2
+    }
+  ]
+}
