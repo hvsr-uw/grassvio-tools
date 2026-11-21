@@ -51,7 +51,7 @@ def main():
             for gap, summary in result["summary"].items():
                 results.append({
                     "recording": bag.name, "gap_frames": int(gap),
-                    "sfm_reconstruction": sfm_path.name if sfm_path else "not_available",
+                    "sfm_reconstruction": ("adaptive" if sfm_path == dense else "ordinary") if sfm_path else "not_available",
                     "multiview_reserved_track_median_px": diagnostics.get("validation_median_px"),
                     **summary,
                 })
@@ -64,6 +64,7 @@ def main():
                   "multiview_reserved_track_median_px", "attempted_pairs",
                   "evaluated_pairs", "parallax_eligible_pairs",
                   "strong_plane_pairs", "median_plane_holdout_px",
+                  "median_gap_seconds", "median_rotation_deg",
                   "median_parallax_deg", "sfm_pose_pairs"]
         with (args.output_dir / "summary.csv").open("w", newline="") as file:
             writer = csv.DictWriter(file, fieldnames=fields, extrasaction="ignore")
@@ -88,8 +89,8 @@ def main():
         "reconstruction; it is not independent physical ground truth.",
         "",
         "| Video | Gap (frames) | Evaluated / attempted | Adequate parallax "
-        "| Strong plane | Median plane holdout (px) | Median parallax (deg) |",
-        "|---|---:|---:|---:|---:|---:|---:|",
+        "| Strong plane | Median plane holdout (px) | Rotation (deg) | Parallax (deg) |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for row in results:
         def fmt(value):
@@ -100,6 +101,7 @@ def main():
             f"{row['evaluated_pairs']}/{row['attempted_pairs']} | "
             f"{row['parallax_eligible_pairs']} | {row['strong_plane_pairs']} | "
             f"{fmt(row['median_plane_holdout_px'])} | "
+            f"{fmt(row['median_rotation_deg'])} | "
             f"{fmt(row['median_parallax_deg'])} |")
     lines.extend([
         "", f"Videos with failed runs: {len(failures)}.",
