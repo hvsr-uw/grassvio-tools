@@ -1,7 +1,9 @@
 import cv2
 import numpy as np
 import pytest
-from motion_channels import estimate_pnp,inertial_path,angle,reconnect_component,fit_anchor_loop
+from motion_channels import (estimate_pnp, inertial_path, angle, reconnect_component,
+                             fit_anchor_loop, estimate_static_window,
+                             velocity_from_visual_displacement)
 
 
 def test_pnp_recovers_target_from_source_metric_pose():
@@ -58,3 +60,78 @@ def test_loop_fit_checks_spatially_unfitted_tracks():
     fitted,stats=fit_anchor_loop(points,corrupted,pixels,400.)
     assert fitted is None
     assert stats['loop_heldout_median_error_px']>30
+
+
+def test_static_window_does_not_assume_the_recording_starts_at_rest():
+    times = np.arange(601, dtype=np.int64) * 5_000_000
+    gyro = np.zeros((len(times), 3))
+    accel = np.tile([0., -9.81, 0.], (len(times), 1))
+    # The first 0.5 s is moving. A quiet interval occurs later.
+    gyro[:100, 2] = 1.0
+    accel[:100, 0] = 0.8
+    window = estimate_static_window(times, gyro, times, accel, window_seconds=0.5)
+    assert window["start_ns"] >= times[100]
+    assert window["median_gyro_norm"] == 0.0
+
+
+def test_inertial_path_accepts_a_visual_initial_velocity():
+    times = np.arange(401, dtype=np.int64) * 5_000_000
+    gyro = np.zeros((len(times), 3))
+    accel = np.tile([0., -9.81, 0.], (len(times), 1))
+    path, init = inertial_path(
+        times, gyro, times, accel, times[[0, 200, 400]], np.eye(3), np.eye(3),
+        np.zeros(3), np.zeros(3),
+        gravity_window={"start_ns": 0, "end_ns": 500_000_000},
+        initial_velocity=np.array([1., 0., 0.]),
+    )
+    np.testing.assert_allclose(path[int(times[-1])][1], [2., 0., 0.], atol=1e-10)
+    assert init["initial_camera_velocity"] == "provided_visual_reference"
+
+
+def test_inertial_path_matches_known_constant_acceleration():
+    # The first half-second is a measured static window. The camera then has
+    # 1 m/s^2 of known acceleration from t=1 s to t=2 s, so the metric
+    # displacement is 0.5 m (plus the one half-sample trapezoid at the step).
+    times = np.arange(401, dtype=np.int64) * 5_000_000
+    gyro = np.zeros((len(times), 3))
+    accel = np.tile([0., -9.81, 0.], (len(times), 1))
+    accel[times >= 1_000_000_000, 0] = 1.
+    path, init = inertial_path(
+        times, gyro, times, accel, times[[0, 100, 400]], np.eye(3), np.eye(3),
+        np.zeros(3), np.zeros(3),
+        gravity_window={"start_ns": 0, "end_ns": 500_000_000},
+        initial_velocity=np.zeros(3),
+    )
+    np.testing.assert_allclose(path[int(times[-1])][1], [0.50250625, 0., 0.], atol=2e-5)
+    assert init["accelerometer_bias_separately_estimated"] is False
+
+
+def test_later_static_gravity_is_transported_to_start_orientation():
+    times = np.arange(401, dtype=np.int64)*5_000_000
+    seconds = times/1e9
+    # Rotate for one second, then stop. There is no linear acceleration.
+    speed = np.where(seconds < 1., .6, 0.)
+    theta = np.r_[0., np.cumsum((speed[:-1]+speed[1:])*.5*.005)]
+    gyro = np.column_stack([np.zeros(len(times)), np.zeros(len(times)), speed])
+    gravity = np.array([0., 9.81, 0.])
+    accel = np.array([-cv2.Rodrigues(np.array([0., 0., a]))[0].T@gravity for a in theta])
+    path, init = inertial_path(times, gyro, times, accel, times[[0, 200, 400]],
+        np.eye(3), np.eye(3), np.zeros(3), np.zeros(3),
+        gravity_window={'start_ns': 1_200_000_000, 'end_ns': 1_800_000_000})
+    np.testing.assert_allclose(init['gravity_vector'], gravity, atol=1e-10)
+    np.testing.assert_allclose(path[int(times[-1])][1], 0., atol=1e-10)
+
+
+def test_visual_velocity_subtracts_acceleration_and_lever_contribution():
+    # At t=2, v0=1 and acceleration=2 give displacement 6, not v0=3.
+    np.testing.assert_allclose(velocity_from_visual_displacement([6., 0., 0.],
+        [4., 0., 0.], 2.), [1., 0., 0.])
+
+
+def test_continuously_rotating_recording_is_not_a_static_bias_candidate():
+    times = np.arange(201, dtype=np.int64)*5_000_000
+    gyro = np.tile([0., 0., .3], (len(times), 1))
+    accel = np.tile([0., -9.81, 0.], (len(times), 1))
+    window = estimate_static_window(times, gyro, times, accel)
+    assert not window['low_motion_candidate']
+    assert not window['stationary_verified']
