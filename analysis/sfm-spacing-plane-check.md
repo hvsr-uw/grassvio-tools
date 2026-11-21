@@ -132,7 +132,9 @@ those numbers from the existing multiview report.
   holdout, homography fitting, parallax test and optional SfM pose check.
 - `scripts/run_sfm_spacing_plane_check.py`: deterministic batch runner and
   combined result tables.
-- `scripts/run_sfm_spacing_synthetic_controls.py`: known-pose conditioning control.\n- `tests/test_sfm_spacing_synthetic_controls.py`: conditioning and plane checks.\n- `tests/test_sfm_spacing_plane_check.py`: synthetic plane and 3D controls,
+- `scripts/run_sfm_spacing_synthetic_controls.py`: known-pose conditioning control.
+- `tests/test_sfm_spacing_synthetic_controls.py`: conditioning and plane checks.
+- `tests/test_sfm_spacing_plane_check.py`: synthetic plane and 3D controls,
   rotation-only and tiny-translation rejection, missing matches and pose
   comparison checks.
 
