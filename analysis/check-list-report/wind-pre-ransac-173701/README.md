@@ -2,7 +2,11 @@
 
 The original [inlier-rate plot](../fig1_inlier_rate.png) raised a question. If the grass was moving, why were so many matches still passing RANSAC? I went back to `20261026_173701` and checked what happened when I screened the matches before fitting the homography.
 
-![Inlier rates and held-out alignment error on 50 five-frame pairs](173701_inlier_rate_and_alignment.png)
+## Frame-by-frame results
+
+![Two line plots showing inlier rate and held-out alignment error against frame number for clip 173701](https://raw.githubusercontent.com/hvsr-uw/grassvio-tools/2b09db0fdf0567d1e19872dcf954c556e5125cab/analysis/check-list-report/wind-pre-ransac-173701/173701_inlier_rate_and_alignment.png)
+
+[Open the frame-by-frame PNG](https://github.com/hvsr-uw/grassvio-tools/blob/2b09db0fdf0567d1e19872dcf954c556e5125cab/analysis/check-list-report/wind-pre-ransac-173701/173701_inlier_rate_and_alignment.png). The dashed line marks the pair from frames 195 to 200.
 
 Across 50 five-frame pairs, the median inlier rate went from **87.2% to 98.3%**. Each rate uses the matches that reached its own RANSAC fit, so the filtered run has a smaller pool of candidates. I scored both fits on the same points held out of the fitting process. Median alignment error went from **1.097 px to 1.053 px**, with most of the difference already visible after the flow check alone (**1.063 px**). Adding the temporal filter after that changed the median paired error by about **−0.001 px**.
 
