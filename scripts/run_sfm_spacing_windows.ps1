@@ -104,24 +104,31 @@ function Invoke-Stage {
 }
 
 if (-not $OnlySpacing) {
-    Invoke-Stage 'scripts/run_motion_recovery.py' @(
+    $recoveryArgs = @(
         '--input-dir', $inputDir,
         '--output-dir', $recovery,
-        '--names') + $names
-    Invoke-Stage 'scripts/run_multiview_validation.py' @(
+        '--names'
+    ) + $names
+    Invoke-Stage -ScriptName 'scripts/run_motion_recovery.py' -ScriptArgs $recoveryArgs
+
+    $multiviewArgs = @(
         '--input-dir', $inputDir,
         '--recovery-dir', $recovery,
         '--output-dir', $multiview,
-        '--adaptive-gaps', '--names') + $names
+        '--adaptive-gaps', '--names'
+    ) + $names
+    Invoke-Stage -ScriptName 'scripts/run_multiview_validation.py' -ScriptArgs $multiviewArgs
 }
 
-Invoke-Stage 'scripts/run_sfm_spacing_plane_check.py' @(
+$spacingArgs = @(
     '--input-dir', $inputDir,
     '--multiview-dir', $multiview,
     '--output-dir', $comparison,
     '--gaps', '5', '25', '50',
     '--anchor-step', '50',
-    '--names') + $names
+    '--names'
+) + $names
+Invoke-Stage -ScriptName 'scripts/run_sfm_spacing_plane_check.py' -ScriptArgs $spacingArgs
 
 Invoke-Stage 'scripts/run_sfm_spacing_synthetic_controls.py' @(
     '--out', (Join-Path $comparison 'synthetic.json')
