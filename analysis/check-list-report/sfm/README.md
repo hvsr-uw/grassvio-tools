@@ -2,7 +2,9 @@
 
 I reconstructed camera paths and sparse 3D points from the RGB recordings. The `080033` reconstruction registered all 19 selected views and produced 1,709 3D points. The six November 19 recordings registered all 203 selected views.
 
-![080033 sparse reconstruction and camera paths](080033-sfm-reconstruction.png)
+![080033 sparse reconstruction and camera paths with Frame 0 marked in both views](080033-sfm-reconstruction-origin-annotated.png)
+
+Frame 0 is at `(0, 0, 0)`. Positive Z points forward from the initial camera. The reconstructed scene points are 0.62 to 1.02 m along that axis, and the SfM camera path spans about 8 cm along Z. The dashed orange line marks the forward direction.
 
 ## Frame spacing on 080033
 
@@ -34,3 +36,17 @@ I compared the flat-ground homography with full SfM on the same held-out image o
 For the homography, I used training tracks to fit the warp from the first view to the target view. For SfM, I kept the camera poses fixed and used two earlier observations to triangulate each reserved point. I then scored both predictions at the same later observation.
 
 [080033 colored point cloud](080033-sparse-reconstruction.ply) · [Camera poses and fit diagnostics](080033-reconstruction.json) · [Later depth results](080033-heldout-depth.json)
+
+## Recreate the figure
+
+Run from the repository root with Python, NumPy, and Matplotlib.
+
+```sh
+python scripts/plot_sfm_reconstruction.py \
+  --sfm analysis/check-list-report/sfm/080033-reconstruction.json \
+  --cloud analysis/check-list-report/sfm/080033-sparse-reconstruction.ply \
+  --orb analysis/audit-imu-preint/runs/080033_orb_poses.json \
+  --output local-results/080033-sfm-reconstruction-origin-annotated.png
+```
+
+[Figure script](../../../scripts/plot_sfm_reconstruction.py)
