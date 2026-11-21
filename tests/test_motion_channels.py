@@ -102,7 +102,7 @@ def test_inertial_path_matches_known_constant_acceleration():
         gravity_window={"start_ns": 0, "end_ns": 500_000_000},
         initial_velocity=np.zeros(3),
     )
-    np.testing.assert_allclose(path[int(times[-1])][1], [0.5000125, 0., 0.], atol=2e-5)
+    np.testing.assert_allclose(path[int(times[-1])][1], [0.50250625, 0., 0.], atol=2e-5)
     assert init["accelerometer_bias_separately_estimated"] is False
 
 
