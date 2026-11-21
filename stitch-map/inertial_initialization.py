@@ -58,6 +58,15 @@ def integrals(gts,gyro,ats,accel,queries,rotation_cg,rotation_ca,initial_rotatio
 
 def run(bag,channels_path,gyro_fit_path,outpath):
     channel=json.loads(Path(channels_path).read_text());cal=json.loads(Path(gyro_fit_path).read_text())
+    if 'selected_hypothesis' not in cal:
+        result={"recording":Path(bag).name,"status":"unavailable_gyro_calibration",
+                "gyro_calibration_status":cal.get('status','missing_selected_hypothesis'),
+                "initialization_usable":False,"metric_ground_truth_available":False,
+                "rejected_fit_applied_to_trajectory":False}
+        Path(outpath).parent.mkdir(parents=True,exist_ok=True)
+        Path(outpath).write_text(json.dumps(result,indent=2,allow_nan=False)+"\n")
+        print(json.dumps(result),flush=True)
+        return result
     recording=Recording(bag)
     try:
         gts,gyro=recording.imu(GYRO);ats,accel=recording.imu(ACCEL)

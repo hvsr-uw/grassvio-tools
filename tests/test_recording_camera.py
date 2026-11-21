@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
-from recording_camera import camera,rays,project,extrinsic
+import pytest
+from recording_camera import camera,rays,project,extrinsic,Recording,DepthPairingError
 
 
 def calibration(model='Brown Conrady'):
@@ -24,3 +25,24 @@ def test_inverse_brown_roundtrip_over_image_grid():
 def test_sdk_extrinsics_are_column_major_and_reference_to_stream():
     rotation,translation=extrinsic('rotation=0,1,0,-1,0,0,0,0,1;translation=1,2,3')
     np.testing.assert_allclose(rotation@[1,0,0]+translation,[1,3,3])
+
+
+def test_unpaired_start_frame_does_not_relax_depth_limit_for_later_frames():
+    recording=Recording.__new__(Recording)
+    recording.color_times=np.array([2_631_900,35_987_000])
+    recording.depth_times=np.array([29_310_100,62_667_000])
+    with pytest.raises(DepthPairingError,match='pairing limit'):
+        recording.depth_pair_for_color(0)
+    index,offset=recording.depth_pair_for_color(1)
+    assert index==0
+    assert offset==pytest.approx(6.6769)
+
+
+def test_depth_pairing_checks_empty_stream_and_threshold():
+    recording=Recording.__new__(Recording)
+    recording.color_times=np.array([0])
+    recording.depth_times=np.array([],dtype=np.int64)
+    with pytest.raises(DepthPairingError,match='no depth'):
+        recording.depth_pair_for_color(0)
+    with pytest.raises(ValueError,match='finite'):
+        recording.depth_pair_for_color(0,max_offset_ms=float('inf'))

@@ -1,4 +1,5 @@
 import numpy as np
+import json
 from inertial_initialization import solve_initialization,design_matrix
 
 
@@ -21,3 +22,16 @@ def test_full_rank_initialized_fit_recovers_known_parameters():
     np.testing.assert_allclose(fitted,parameters,atol=1e-8)
     assert report['observable_by_linear_gate'] is True
     assert report['physically_plausible'] is True
+
+
+def test_short_recording_without_gyro_fit_cannot_initialize_translation(tmp_path):
+    from inertial_initialization import run
+    channels=tmp_path/'channels.json';channels.write_text('{}')
+    calibration=tmp_path/'gyro.json'
+    calibration.write_text(json.dumps({'status':'insufficient_prefix_or_validation_rotations'}))
+    output=tmp_path/'result.json'
+    result=run(tmp_path/'short.db3',channels,calibration,output)
+    assert result['initialization_usable'] is False
+    assert result['status']=='unavailable_gyro_calibration'
+    assert result['gyro_calibration_status']=='insufficient_prefix_or_validation_rotations'
+    assert json.loads(output.read_text())==result

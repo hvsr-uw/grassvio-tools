@@ -410,5 +410,13 @@ translation still fails validation. I need stronger initialization data,
 verified camera motion and a metric reference before claiming agreement
 between all three channels.
 
+I also recovered four older recordings and measured archived controls in
+[analysis/archived-controls/report.md](analysis/archived-controls/report.md).
+The September video supplies 53 valid adjacent RGB-D intervals after one
+colour/depth pair is marked unavailable. These controls keep missing depth
+explicit, score temporal and colour filtering on held-out image tiles, and
+do not label any recording as wind or stationary without independent motion
+evidence.
+
 I keep the related-work findings in
 [motion-filter-related-work.md](research/motion-filter-related-work.md).
