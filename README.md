@@ -34,6 +34,23 @@ The earlier first-image projection experiments below remain a separate
 baseline. The local homography maps are not one metric orthomosaic, and
 the RGB-D poses are a model reference rather than ground truth.
 
+## SfM near/far frame and flat-plane check
+
+I also compare near frames with wider frame gaps after correcting for the recorded
+camera calibration. I require translation-induced angular parallax rather than
+camera rotation alone, fit the grass-plane homography on training image tiles,
+and score separate image tiles that were not used for fitting. Where the full
+SfM reconstruction includes both frames, I check its epipolar geometry too.
+
+```bash
+python scripts/run_sfm_spacing_plane_check.py --input-dir recordings --multiview-dir local-results/multiview --output-dir local-results/sfm-spacing --gaps 5 25 50 --anchor-step 50
+```
+
+I save pair-level JSON/CSV and a combined report. The homography transfer error
+and SfM epipolar error have different dimensions, and neither is independent
+motion ground truth. The methods, commands and limitations are in
+[sfm-spacing-plane-check.md](analysis/sfm-spacing-plane-check.md).
+
 ## Multiview reconstruction and refined timing
 
 I also run image-only incremental SfM across the sampled views. I carry
