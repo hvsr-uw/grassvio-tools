@@ -90,10 +90,16 @@ def compare_matches(source, target, source_raw, image_size, focal, min_matches=4
         result["status"] = "plane_fit_failed"
         return result
     plane_errors = pixel_errors(H, source[hold], target[hold])
-    result.update(plane_check=("strong" if result["plane_inlier_fraction"] >= .8
-                               else "weak_or_nonplanar"),
-                  plane_holdout_median_px=float(np.median(plane_errors)),
-                  plane_holdout_p90_px=float(np.percentile(plane_errors, 90)))
+    invalid = ~np.isfinite(plane_errors)
+    result.update(plane_holdout_invalid_count=int(invalid.sum()),
+                  plane_check=("strong" if result["plane_inlier_fraction"] >= .8
+                               and not invalid.any() else "weak_or_nonplanar"),
+                  plane_holdout_median_px=(
+                      float(np.median(plane_errors)) if
+                      np.isfinite(np.median(plane_errors)) else None),
+                  plane_holdout_p90_px=(
+                      float(np.percentile(plane_errors, 90)) if
+                      np.isfinite(np.percentile(plane_errors, 90)) else None))
 
     calibration = np.diag([focal, focal, 1.])
     try:
@@ -154,7 +160,16 @@ def summarize(rows, gaps):
             "parallax_eligible_pairs": sum(bool(r["eligible"]) for r in good),
             "strong_plane_pairs": sum(r["plane_check"] == "strong" for r in good),
             "median_plane_holdout_px": (float(np.median(
-                [r["plane_holdout_median_px"] for r in good])) if good else None),
+                [r["plane_holdout_median_px"] for r in good
+                 if r["plane_holdout_median_px"] is not None]))
+                if any(r["plane_holdout_median_px"] is not None for r in good)
+                else None),
+            "median_gap_seconds": (float(np.median(
+                [r["gap_seconds"] for r in good if "gap_seconds" in r]))
+                if any("gap_seconds" in r for r in good) else None),
+            "median_rotation_deg": (float(np.median(
+                [r["rotation_deg"] for r in good if "rotation_deg" in r]))
+                if any("rotation_deg" in r for r in good) else None),
             "median_parallax_deg": (float(np.median(
                 [r["median_parallax_deg"] for r in good
                  if "median_parallax_deg" in r]))
