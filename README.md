@@ -449,3 +449,8 @@ translation ground truth. See
 
 I keep the related-work findings in
 [motion-filter-related-work.md](research/motion-filter-related-work.md).
+
+
+## Project website
+
+The presentation structure and GitLab Pages hosting plan are in [docs/website-plan.md](docs/website-plan.md).
