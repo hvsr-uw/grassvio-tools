@@ -37,3 +37,12 @@ python scripts/ground_frame_sfm.py \
   --imu analysis/audit-imu-preint/runs/20261007_080033_preint.json \
   --outdir analysis/check-list-report/sfm
 ```
+
+
+## Figures for Jinming’s frame request
+
+- [Shared-world-frame camera paths](https://github.com/hvsr-uw/grassvio-tools/blob/codex/multiview-and-inertial-validation/analysis/check-list-report/sfm/080033-ground-world-trajectories.svg): RGB-only SfM and RGB-D reference paths after the same one-time ground transform, with top-down motion and camera height.
+- [Shared-world-frame motion residuals](https://github.com/hvsr-uw/grassvio-tools/blob/codex/multiview-and-inertial-validation/analysis/check-list-report/sfm/080033-ground-world-residuals.svg): same-frame position error, interval displacement residual, and rotation residuals against RGB-D and integrated gyro.
+- [Ground-aligned sparse reconstruction](https://github.com/hvsr-uw/grassvio-tools/blob/codex/multiview-and-inertial-validation/analysis/check-list-report/sfm/080033-ground-world-frame.svg): 3D scene and camera paths in the fitted ground frame.
+
+Wind inlier-rate and optical-flow figures are relevant to the blower/grass discussion but do not depend on this coordinate-frame update.
