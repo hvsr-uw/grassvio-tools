@@ -174,6 +174,8 @@ python -m pytest -q tests
 python scripts/validate_window_filter.py --outdir analysis/window-filter-validation
 ```
 
+The panorama stitching implementation is in [`stitch-map/stitch_map.py`](stitch-map/stitch_map.py). It matches frames, estimates homographies, and composes the warped frames into a map.
+
 Stitch a video and put its source frames beside their warped map footprints:
 
 ```bash
