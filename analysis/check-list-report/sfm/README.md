@@ -6,6 +6,8 @@ I reconstructed camera paths and sparse 3D points from the RGB recordings. The `
 
 Frame 0 is at `(0, 0, 0)`. Positive Z points forward from the initial camera. The reconstructed scene points are 0.62 to 1.02 m along that axis, and the SfM camera path spans about 8 cm along Z. The dashed orange line marks the forward direction.
 
+[Ground-aligned world-frame figure and poses](../sfm-world-frame/README.md)
+
 ## Frame spacing on 080033
 
 Frames 0 and 425 gave 3.78° of median parallax after accounting for rotation. I used that pair to initialize the reconstruction, then registered and refined the other selected views. I set the metric scale using synchronized depth at frame 25 and checked the result against depth from later views.

@@ -4,8 +4,6 @@ import argparse
 import json
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import proj3d
 import numpy as np
 
 
@@ -23,6 +21,9 @@ def read_colored_points(path):
 
 
 def render(sfm_path, cloud_path, orb_path, output):
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import proj3d
+
     sfm = json.loads(sfm_path.read_text(encoding="utf-8"))
     orb = json.loads(orb_path.read_text(encoding="utf-8"))
     frames = sfm["registered_frames"]
