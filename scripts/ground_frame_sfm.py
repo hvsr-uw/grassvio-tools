@@ -86,10 +86,11 @@ def rotation_error_deg(a, b):
 
 
 def quantiles(values):
-    values = np.asarray(values, dtype=float)
+    values = np.sort(np.asarray(values, dtype=float))
+    p90_index = math.ceil(0.90 * len(values)) - 1
     return {
         "median": float(np.median(values)),
-        "p90": float(np.percentile(values, 90)),
+        "p90": float(values[p90_index]),
         "max": float(np.max(values)),
         "mean": float(np.mean(values)),
     }
@@ -270,7 +271,7 @@ def main():
         "normal_in_frame0_camera": normal.tolist(),
         "offset_m": float(offset),
         "median_inlier_absolute_distance_m": float(np.median(distances)),
-        "p90_inlier_absolute_distance_m": float(np.percentile(distances, 90)),
+        "p90_inlier_absolute_distance_m": float(np.sort(distances)[math.ceil(0.90 * len(distances)) - 1]),
         "frame0_camera_height_above_plane_m": float(-offset),
     }
     summary = {
