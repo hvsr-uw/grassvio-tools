@@ -454,3 +454,10 @@ I keep the related-work findings in
 ## Project website
 
 The presentation structure and GitLab Pages hosting plan are in [docs/website-plan.md](docs/website-plan.md).
+
+
+## Depth-to-color registration
+
+The RGB-D odometry now uses the recording-specific calibration and depth-to-color registration in `recording_camera.py` before it samples 3D points at color-image features or renders the orthomosaic. This avoids treating a depth pixel and a color pixel with the same coordinates as the same ray.
+
+The implementation change still needs a visual check on the synchronized recording and a rerun of the metric-translation result. The raw bag is not stored in this repository, so the existing metric result should not be treated as revalidated by this code change. The calibration audit and its remaining visual-check caveat are in [analysis/audit-depth-warp-summary.md](analysis/audit-depth-warp-summary.md).
