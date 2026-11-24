@@ -5,12 +5,13 @@ Replaces chained 2D homographies (which diverge on rotation-heavy takes)
 with per-pair SE(3) estimated from the depth channel:
 
   pair:  SIFT match (same settings as stitch_map.py) ->
-         back-project frame-i keypoints to 3D with depth + K_depth ->
-         cv2.solvePnPRansac against frame-(i+1) 2D keypoints (K_color)
+         register depth into the color frame from recorded calibration ->
+         sample 3D points at frame-i color keypoints ->
+         solvePnP against calibrated frame-(i+1) color rays
   chain: absolute poses A[i+1] = A[i] @ inv(T_{i+1,i})
-  map:   orthomosaic — every valid depth pixel unprojected to 3D,
-         transformed by A[i], splatted (averaged) into a top-down
-         ground-plane grid. No homography warping anywhere.
+  map:   orthomosaic — depth points are registered into each color frame,
+         transformed by A[i], and splatted with their matching colors into
+         a top-down grid. No homography warping is used.
 
 Usage:
     python3 rgbd_odometry.py --bag <take>.db3 --out <prefix> [--stride 5]
@@ -42,7 +43,7 @@ MIN_INLIERS = 20
 MIN_3D = 30  # minimum keypoints with valid depth to attempt PnP
 
 
-def load_synced(bag, max_offset_s=0.05):
+def load_synced(bag, max_offset_s=0.02):
     """Color+depth frames paired by nearest timestamp (dropped frames ok)."""
     db = sqlite3.connect(f"file:{bag}?mode=ro", uri=True)
     db.execute("PRAGMA query_only=ON")
