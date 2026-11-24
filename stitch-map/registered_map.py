@@ -86,7 +86,7 @@ def render(bag,channels_path,outpath,pixels_per_m=200.):
         image[cells]=bgr[order[first]]
         image=image.reshape(height,width,3)
         if not cv2.imwrite(str(outpath),image):raise OSError("could not write registered map")
-        stats={"recording":Path(bag).name,"camera_pose_source":"registered_RGBD_PnP",
+        stats={"recording":Path(bag).name,"camera_pose_source":channels.get("camera_pose_source","registered_RGBD_PnP"),
                "metric_ground_truth_available":False,"pixels_per_m":pixels_per_m,
                "initial_plane_normal_color":normal.tolist(),"initial_plane_distance_m":distance,
                "initial_plane_fit":plane_stats,"frames_used":used,"frames_skipped_unconnected":skipped,

@@ -5,12 +5,13 @@ Replaces chained 2D homographies (which diverge on rotation-heavy takes)
 with per-pair SE(3) estimated from the depth channel:
 
   pair:  SIFT match (same settings as stitch_map.py) ->
-         back-project frame-i keypoints to 3D with depth + K_depth ->
-         cv2.solvePnPRansac against frame-(i+1) 2D keypoints (K_color)
+         register depth into the color frame from recorded calibration ->
+         sample 3D points at frame-i color keypoints ->
+         solvePnP against calibrated frame-(i+1) color rays
   chain: absolute poses A[i+1] = A[i] @ inv(T_{i+1,i})
-  map:   orthomosaic — every valid depth pixel unprojected to 3D,
-         transformed by A[i], splatted (averaged) into a top-down
-         ground-plane grid. No homography warping anywhere.
+  map:   orthomosaic — depth points are registered into each color frame,
+         transformed by A[i], and splatted with their matching colors into
+         a top-down grid. No homography warping is used.
 
 Usage:
     python3 rgbd_odometry.py --bag <take>.db3 --out <prefix> [--stride 5]
@@ -31,22 +32,18 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "..", "bag-exploration"))
-from explore_bag import parse_image, COLOR, DEPTH  # noqa: E402
+from explore_bag import COLOR, DEPTH  # noqa: E402
+from recording_camera import Recording, rays
 
-DEPTH_UNITS = 0.001  # m per count (from Depth_Units metadata)
-K_DEPTH = np.array([[386.009827, 0, 320.77182],
-                    [0, 386.009827, 240.889587],
-                    [0, 0, 1.0]])
-K_COLOR = np.array([[386.251221, 0, 323.054626],
-                    [0, 385.510895, 250.530975],
-                    [0, 0, 1.0]])
+# Intrinsics, distortion, depth scale, and the depth-to-color transform are
+# read from each recording. Do not assume depth and color pixels are aligned.
 STRIDE = 5
 LOWE = 0.75
 MIN_INLIERS = 20
 MIN_3D = 30  # minimum keypoints with valid depth to attempt PnP
 
 
-def load_synced(bag, max_offset_s=0.05):
+def load_synced(bag, max_offset_s=0.02):
     """Color+depth frames paired by nearest timestamp (dropped frames ok)."""
     db = sqlite3.connect(f"file:{bag}?mode=ro", uri=True)
     db.execute("PRAGMA query_only=ON")
@@ -89,13 +86,7 @@ def load_synced(bag, max_offset_s=0.05):
     return {COLOR: gray, DEPTH: depth, "color_bgr": color}
 
 
-def unproject(u, v, d_m):
-    x = (u - K_DEPTH[0, 2]) / K_DEPTH[0, 0] * d_m
-    y = (v - K_DEPTH[1, 2]) / K_DEPTH[1, 1] * d_m
-    return np.stack([x, y, np.full_like(x, d_m)], axis=-1)
-
-
-def pair_pose(gray_i, depth_i, gray_j, sift, matcher):
+def pair_pose(gray_i, cloud_i, gray_j, color_cal, sift, matcher):
     """SE(3) of frame j relative to frame i (maps i-coords to j-coords)."""
     kp_i, des_i = sift.detectAndCompute(gray_i, None)
     kp_j, des_j = sift.detectAndCompute(gray_j, None)
@@ -107,23 +98,26 @@ def pair_pose(gray_i, depth_i, gray_j, sift, matcher):
     if len(good) < MIN_INLIERS:
         return None, {"inliers": 0, "n_3d": 0, "ok": False}
     pts3d, pts2d = [], []
-    h, w = depth_i.shape
+    h, w = cloud_i.shape[:2]
     for m in good:
         u, v = kp_i[m.queryIdx].pt
         ui, vi = int(round(u)), int(round(v))
         if 0 <= ui < w and 0 <= vi < h:
-            d = depth_i[vi, ui] * DEPTH_UNITS
-            if d > 0.05:  # valid depth, beyond the noise floor
-                pts3d.append(unproject(
-                    np.array([u]), np.array([v]), np.array([d]))[0])
+            point = cloud_i[vi, ui]
+            if np.isfinite(point).all() and point[2] > 0.05:
+                pts3d.append(point)
                 pts2d.append(kp_j[m.trainIdx].pt)
     pts3d = np.float64(pts3d)
     pts2d = np.float32(pts2d)
     n_3d = len(pts3d)
     if n_3d < MIN_3D:
         return None, {"inliers": 0, "n_3d": n_3d, "ok": False}
+    # Convert observed color pixels to calibrated normalized rays. The
+    # recording uses Inverse Brown Conrady distortion, so passing its raw
+    # coefficients to OpenCV as standard Brown distortion would be wrong.
+    pts2d = rays(pts2d, color_cal)[:, :2].astype(np.float32)
     ok, rvec, tvec, inl = cv2.solvePnPRansac(
-        pts3d, pts2d, K_COLOR, None,
+        pts3d, pts2d, np.eye(3, dtype=np.float64), None,
         reprojectionError=3.0, confidence=0.99, iterationsCount=200)
     if not ok or inl is None or len(inl) < MIN_INLIERS:
         return None, {"inliers": int(len(inl)) if inl is not None else 0,
@@ -151,6 +145,7 @@ def main():
     args = ap.parse_args()
 
     data = load_synced(args.bag)
+    recording = Recording(args.bag)
     n = len(data[COLOR])
     idx = list(range(0, n, args.stride))
     print(f"{n} frames, {len(idx)} chosen @ stride {args.stride}",
@@ -165,7 +160,10 @@ def main():
     T_rel, stats = [], []
     for k in range(len(idx) - 1):
         i, j = idx[k], idx[k + 1]
-        T, st = pair_pose(gray[i], data[DEPTH][i], gray[j], sift, matcher)
+        cloud_i, offset_ms = recording.cloud_for_color(i)
+        T, st = pair_pose(gray[i], cloud_i, gray[j], recording.color,
+                          sift, matcher)
+        st["depth_color_offset_ms"] = float(offset_ms)
         st["pair"] = (i, j)
         stats.append(st)
         T_rel.append(T)
@@ -195,11 +193,11 @@ def main():
     print(f"splatting {sum(splat_ok)}/{len(idx)} frames "
           f"(tilt <= {args.max_tilt_deg} deg)", flush=True)
 
-    h, w = data[DEPTH][0].shape
+    h, w = recording.color["height"], recording.color["width"]
     uu, vv = np.meshgrid(np.arange(0, w, args.px_step),
                          np.arange(0, h, args.px_step))
-    uu = uu.ravel().astype(np.float64)
-    vv = vv.ravel().astype(np.float64)
+    uu = uu.ravel().astype(int)
+    vv = vv.ravel().astype(int)
 
     # first pass: bounds
     mins = np.full(2, np.inf)
@@ -207,11 +205,12 @@ def main():
     for k, fidx in enumerate(idx):
         if not splat_ok[k]:
             continue
-        d = data[DEPTH][fidx][vv.astype(int), uu.astype(int)] * DEPTH_UNITS
-        valid = (d > 0.05) & (d < args.max_depth_m)
+        cloud, _ = recording.cloud_for_color(fidx)
+        P = cloud[vv, uu]
+        valid = np.isfinite(P).all(axis=1) & (P[:, 2] > 0.05) & (P[:, 2] < args.max_depth_m)
         if not np.any(valid):
             continue
-        P = unproject(uu[valid], vv[valid], d[valid])
+        P = P[valid]
         Pw = (A[k][:3, :3] @ P.T).T + A[k][:3, 3]
         mins = np.minimum(mins, Pw[:, :2].min(axis=0))
         maxs = np.maximum(maxs, Pw[:, :2].max(axis=0))
@@ -224,16 +223,16 @@ def main():
     for k, fidx in enumerate(idx):
         if not splat_ok[k]:
             continue
-        d = data[DEPTH][fidx][vv.astype(int), uu.astype(int)] * DEPTH_UNITS
-        valid = (d > 0.05) & (d < args.max_depth_m)
+        cloud, _ = recording.cloud_for_color(fidx)
+        P = cloud[vv, uu]
+        valid = np.isfinite(P).all(axis=1) & (P[:, 2] > 0.05) & (P[:, 2] < args.max_depth_m)
         if not np.any(valid):
             continue
-        P = unproject(uu[valid], vv[valid], d[valid])
+        P = P[valid]
         Pw = (A[k][:3, :3] @ P.T).T + A[k][:3, 3]
         gx = ((Pw[:, 0] - mins[0]) / args.grid_m).astype(int)
         gy = ((Pw[:, 1] - mins[1]) / args.grid_m).astype(int)
-        col = bgr[fidx][vv.astype(int)[valid], uu.astype(int)[valid]
-                      ].astype(np.float64)
+        col = bgr[fidx][vv[valid], uu[valid]].astype(np.float64)
         np.add.at(acc, (gy, gx), col)
         np.add.at(cnt, (gy, gx), 1)
         if k % 40 == 0:
@@ -259,6 +258,7 @@ def main():
             "map_extent_m": [float(ext[0]), float(ext[1])],
             "grid_m": args.grid_m,
         }, f)
+    recording.close()
     print("done", flush=True)
 
 

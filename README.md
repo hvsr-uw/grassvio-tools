@@ -34,6 +34,101 @@ The earlier first-image projection experiments below remain a separate
 baseline. The local homography maps are not one metric orthomosaic, and
 the RGB-D poses are a model reference rather than ground truth.
 
+## SfM near/far frame and flat-plane check
+
+I also compare near frames with wider frame gaps after correcting for the recorded
+camera calibration. I require translation-induced angular parallax rather than
+camera rotation alone, fit the grass-plane homography on training image tiles,
+and score separate image tiles that were not used for fitting. Where the full
+SfM reconstruction includes both frames, I check its epipolar geometry too.
+
+```bash
+python scripts/run_sfm_spacing_plane_check.py --input-dir recordings --multiview-dir local-results/multiview --output-dir local-results/sfm-spacing --gaps 5 25 50 --anchor-step 50
+```
+
+I save pair-level JSON/CSV and a combined report. The homography transfer error
+and SfM epipolar error have different dimensions, and neither is independent
+motion ground truth. The methods, commands and limitations are in
+[sfm-spacing-plane-check.md](analysis/sfm-spacing-plane-check.md).
+
+## Multiview reconstruction and refined timing
+
+I also run image-only incremental SfM across the sampled views. I carry
+temporally filtered feature sites through successive windows, triangulate
+landmarks, register cameras with PnP, and jointly refine the cameras and
+structure with bundle adjustment. Depth and IMU do not enter that camera
+fit. I estimate one metric scale afterward from registered depth in the
+initial image. I reserve feature tracks for an image-consistency check.
+
+```bash
+python scripts/run_multiview_validation.py --input-dir recordings --recovery-dir local-results/recovery --output-dir local-results/multiview --adaptive-gaps
+```
+
+This also widens the prefix-only gyro timing search, tests a constrained
+inertial initializer, compares later SfM, RGB-D and gyro motion, and draws
+a separate registered-depth map through the labelled SfM poses. The
+modules reuse measurements when source and input fingerprints match. I
+use closer keyframes and five-frame feature support when the ordinary SfM
+run has unsupported views. This is a separate window setting; it does not
+show that the original 25-frame setting handled that motion. I
+keep the results in [multiview-results.md](analysis/multiview-results.md).
+These checks do not supply independent metric ground truth.
+
+## Semantic cues and IMU initialization
+
+The temporal optical-flow check now has a separate semantic cue module in
+`stitch-map/semantic_cues.py`. It computes an auditable vegetation-like
+likelihood from colour, then rejects a point only when the point is both
+vegetation-like and inconsistent with the fitted camera motion. A green
+surface with rigid motion is kept. This is a conservative cue, not a learned
+semantic segmentation model and not proof that wind caused the residual.
+
+IMU gravity and gyro bias initialization no longer assumes that the first
+second is static. The channel runner searches measured sensor windows for the
+lowest gyro motion and accelerometer-norm variation. If an RGB-D edge is
+available, it also uses that first visual displacement to initialize camera
+velocity. If no visual edge can initialize it, the output records the
+zero-velocity fallback explicitly. The gyro update and acceleration update
+use trapezoidal integration. The resulting translation is still treated as
+a diagnostic: the existing withheld-motion tests do not validate an
+independent IMU translation prior.
+
+The detailed historical checklist is in
+[check-list-report/report.md](analysis/check-list-report/report.md).
+
+## Synchronized motion and drift figures
+
+I recheck each recording with the latest channel code and generate XYZ
+translation and rotation, temporal IMU averaging, common-interval Fig. 6
+comparisons, and drift plots. The five-sample average smooths each sensor
+axis over time. The plots preserve the camera frame and metric scale;
+rotation plots break lines at angle-axis branch cuts to avoid false
+motion jumps. Gravity samples from a later quiet window are rotated into
+the starting camera frame. Visual velocity initialization subtracts the
+measured acceleration contribution before estimating initial velocity.
+
+The optional vegetation cue uses a stricter residual gate (1.125 px by
+default) than the ordinary flow gate (1.5 px). This allows it to affect
+selection; both thresholds still need independent calibration. The final
+runner measures its effect separately from the previously fitted visual
+poses, so the SfM reconstruction is not presented as a semantic ablation.
+
+```bash
+python -m pip install -r requirements-analysis.txt
+python scripts/run_jinming_validation.py --input-dir recordings --recovery-dir local-results/recovery --multiview-dir local-results/multiview --output-dir local-results/jinming-final
+python scripts/summarize_jinming_validation.py --input-dir local-results/jinming-final --publish-dir analysis/jinming-validation
+```
+
+The runner reuses existing visual tracks and SfM only after verifying that
+the newly measured RGB-D poses match the original reconstruction inputs.
+It also evaluates IMU predictions initialized from previous visual poses
+against a constant-velocity baseline before observing the next camera
+position. This exposes the effect of visual drift resets without counting
+the reset observation as a successful prediction. Full traces, CSV files
+and PNG/SVG/PDF figures remain in the chosen local output directory.
+The measured results and limitations are in the
+[recorded-motion validation report](analysis/jinming-validation/report.md).
+
 ## Homography and motion filtering
 
 I fixed the normalized homography threshold so the inlier cutoff stays at
@@ -52,7 +147,7 @@ one, I use a visual plane fit as a proxy. That proxy can follow moving grass,
 so it does not independently separate wind from camera movement. A low gyro
 reading alone does not establish that the camera is stationary.
 
-I ran 67 regression checks and four synthetic camera/grass combinations.
+I ran 78 regression checks and four synthetic camera/grass combinations.
 The camera prediction in these tests is known exactly. The patch is
 synthetic texture rather than a physical grass simulation.
 
@@ -79,6 +174,8 @@ python -m pytest -q tests
 python scripts/validate_window_filter.py --outdir analysis/window-filter-validation
 ```
 
+The panorama stitching implementation is in [`stitch-map/stitch_map.py`](stitch-map/stitch_map.py). It matches frames, estimates homographies, and composes the warped frames into a map.
+
 Stitch a video and put its source frames beside their warped map footprints:
 
 ```bash
@@ -90,8 +187,14 @@ For an independently known stationary recording:
 
 ```bash
 python stitch-map/stitch_map.py --bag stationary.db3 --out filtered.png \
-  --motion-filter --flow-window 25 --camera-still --debug-out debug.png
+  --motion-filter --flow-window 25 --camera-still --semantic-cues \
+  --debug-out debug.png
 ```
+
+The optional --semantic-cues flag combines the colour-based vegetation
+cue with the temporal residual. It is intentionally conservative: colour
+alone never rejects a point, and the output does not claim that the
+residual was caused by wind.
 
 For a moving camera, replace `--camera-still` with
 `--camera-motion motion.json`. The file holds one pixel homography per input
@@ -320,10 +423,41 @@ stretched near its far end. Those numbers belong to the earlier matcher;
 they have not been rerun with the corrected fitter and reciprocal matching.
 A high pairwise inlier count does not establish an accurate chained path.
 
-The current priority is testing the corrected homography and window filter
-on original videos. The IMU/RGB-D translation comparison also needs a video
-with a known zero starting velocity. I still need matching timestamps,
-calibration and a common metric scale before comparing all three channels.
+I have now tested recovery on six original November 19 videos and added
+multiview SfM with a scale estimated from initial depth. Independent IMU
+translation still fails validation. I need stronger initialization data,
+verified camera motion and a metric reference before claiming agreement
+between all three channels.
+
+I also recovered four older recordings and measured archived controls in
+[analysis/archived-controls/report.md](analysis/archived-controls/report.md).
+The September video supplies 53 valid adjacent RGB-D intervals after one
+colour/depth pair is marked unavailable. These controls keep missing depth
+explicit, score temporal and colour filtering on held-out image tiles, and
+do not label any recording as wind or stationary without independent motion
+evidence.
+
+I recovered the original midterm report and checked its Fig. 6 definition. It
+uses 53 consecutive pairs from `20260926_155419`, ORB/SIFT/HOG/BFM visual
+estimates, a 2 px RANSAC threshold, metre translation magnitudes, and IMU motion
+converted into the colour frame. The original plotting script is not present in
+the recovered code archive, so the exact numerical implementation remains
+unreproducible. The matching simulation archive has synthetic pose records but
+gravity-only accelerometer samples, so it cannot serve as independent inertial
+translation ground truth. See
+[analysis/fig6-provenance/report.md](analysis/fig6-provenance/report.md).
 
 I keep the related-work findings in
 [motion-filter-related-work.md](research/motion-filter-related-work.md).
+
+
+## Project website
+
+The presentation structure and GitLab Pages hosting plan are in [docs/website-plan.md](docs/website-plan.md).
+
+
+## Depth-to-color registration
+
+The RGB-D odometry now uses the recording-specific calibration and depth-to-color registration in `recording_camera.py` before it samples 3D points at color-image features or renders the orthomosaic. This avoids treating a depth pixel and a color pixel with the same coordinates as the same ray.
+
+The implementation change still needs a visual check on the synchronized recording and a rerun of the metric-translation result. The raw bag is not stored in this repository, so the existing metric result should not be treated as revalidated by this code change. The calibration audit and its remaining visual-check caveat are in [analysis/audit-depth-warp-summary.md](analysis/audit-depth-warp-summary.md).

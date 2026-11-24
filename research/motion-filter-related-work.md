@@ -22,6 +22,9 @@ the following sources; I have not reproduced their experiments.
 
 I now have six original-video recovery and channel-check runs, recorded in
 [motion-recovery-results.md](../analysis/motion-recovery-results.md).
+The later [multiview results](../analysis/multiview-results.md) add an
+image-only reconstruction, a wider timing search and a constrained
+eight-unknown initialization test. The inertial fit still fails validation.
 The synthetic 2x2 still checks the implementation. The real videos show
 tracking and timing behaviour, but do not independently label wind or
 provide metric camera ground truth.

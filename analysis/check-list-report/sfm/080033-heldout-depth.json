@@ -1,0 +1,130 @@
+[
+  {
+    "recording": "20261007_080033.db3",
+    "selected_frames": 19,
+    "registered_frames": 19,
+    "metric_ground_truth_available": false,
+    "status": "compared",
+    "scale_calibration_frame": 25,
+    "frames_with_depth": 14,
+    "observations": 5757,
+    "per_frame": [
+      {
+        "frame": 125,
+        "predictions": 73,
+        "with_depth": 72,
+        "depth_offset_ms": 6.4826,
+        "nonpositive_predictions": 0,
+        "median_absolute_depth_error_m": 0.008944736680586707
+      },
+      {
+        "frame": 150,
+        "predictions": 280,
+        "with_depth": 257,
+        "depth_offset_ms": 6.5714,
+        "nonpositive_predictions": 0,
+        "median_absolute_depth_error_m": 0.011175320115122345
+      },
+      {
+        "frame": 175,
+        "predictions": 308,
+        "with_depth": 306,
+        "depth_offset_ms": 5.7112,
+        "nonpositive_predictions": 0,
+        "median_absolute_depth_error_m": 0.012234126585304095
+      },
+      {
+        "frame": 200,
+        "predictions": 307,
+        "with_depth": 307,
+        "depth_offset_ms": 5.9836,
+        "nonpositive_predictions": 0,
+        "median_absolute_depth_error_m": 0.013619009243079017
+      },
+      {
+        "frame": 225,
+        "predictions": 466,
+        "with_depth": 465,
+        "depth_offset_ms": 6.5334,
+        "nonpositive_predictions": 0,
+        "median_absolute_depth_error_m": 0.016312861354173425
+      },
+      {
+        "frame": 250,
+        "predictions": 543,
+        "with_depth": 539,
+        "depth_offset_ms": 6.3923,
+        "nonpositive_predictions": 0,
+        "median_absolute_depth_error_m": 0.016220892146124877
+      },
+      {
+        "frame": 275,
+        "predictions": 435,
+        "with_depth": 425,
+        "depth_offset_ms": 6.3194,
+        "nonpositive_predictions": 0,
+        "median_absolute_depth_error_m": 0.018036840629081285
+      },
+      {
+        "frame": 300,
+        "predictions": 413,
+        "with_depth": 396,
+        "depth_offset_ms": 6.5615,
+        "nonpositive_predictions": 0,
+        "median_absolute_depth_error_m": 0.015113637980748218
+      },
+      {
+        "frame": 325,
+        "predictions": 439,
+        "with_depth": 407,
+        "depth_offset_ms": 6.0641,
+        "nonpositive_predictions": 0,
+        "median_absolute_depth_error_m": 0.016138184116877508
+      },
+      {
+        "frame": 350,
+        "predictions": 395,
+        "with_depth": 363,
+        "depth_offset_ms": 6.4187,
+        "nonpositive_predictions": 0,
+        "median_absolute_depth_error_m": 0.0151389023528814
+      },
+      {
+        "frame": 375,
+        "predictions": 406,
+        "with_depth": 400,
+        "depth_offset_ms": 5.5137,
+        "nonpositive_predictions": 0,
+        "median_absolute_depth_error_m": 0.01920656605960147
+      },
+      {
+        "frame": 400,
+        "predictions": 542,
+        "with_depth": 538,
+        "depth_offset_ms": 6.354,
+        "nonpositive_predictions": 0,
+        "median_absolute_depth_error_m": 0.01782433144736978
+      },
+      {
+        "frame": 425,
+        "predictions": 685,
+        "with_depth": 643,
+        "depth_offset_ms": 6.5824,
+        "nonpositive_predictions": 0,
+        "median_absolute_depth_error_m": 0.0192677132292004
+      },
+      {
+        "frame": 440,
+        "predictions": 672,
+        "with_depth": 639,
+        "depth_offset_ms": 6.4069,
+        "nonpositive_predictions": 0,
+        "median_absolute_depth_error_m": 0.01926822794491989
+      }
+    ],
+    "median_absolute_depth_error_m": 0.016339549453543767,
+    "p90_absolute_depth_error_m": 0.0431151752074049,
+    "median_absolute_relative_depth_error": 0.019157845293133295,
+    "median_signed_depth_error_m": -0.006444011019351659
+  }
+]

@@ -1,5 +1,8 @@
 # Motion recovery and channel checks
 
+The later [multiview follow-up](multiview-results.md) adds a longer image-only
+reconstruction and refines timing. The tables below retain the earlier run.
+
 I ran the six November 19 recordings on November 20, 2026. They contain 4,080 colour frames. I recovered the complete sampled homography path in every video and added calibrated RGB-D tracking, temporal-filtered loop recovery and registered-depth maps. The IMU translation initialization still fails its checks, so I have not established agreement between all three motion channels.
 
 ## Tracking and maps

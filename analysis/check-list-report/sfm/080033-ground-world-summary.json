@@ -1,0 +1,112 @@
+{
+  "recording": "20261007_080033.db3",
+  "world_frame": {
+    "name": "080033 ground-aligned shared frame",
+    "definition": {
+      "origin": "projection of Frame 0 camera center onto the fitted grass plane",
+      "x_axis": "Frame 0 camera +Z projected onto the fitted ground plane",
+      "y_axis": "Z_up cross X, right-handed",
+      "z_axis": "upward normal of the fitted grass plane",
+      "units": "metres"
+    },
+    "ground_plane_fit": {
+      "method": "RANSAC plane fit to sparse SfM point cloud, refined by PCA of inliers",
+      "points_total": 1709,
+      "inlier_threshold_m": 0.008,
+      "inliers": 698,
+      "inlier_fraction": 0.40842598010532477,
+      "normal_in_frame0_camera": [
+        -0.13904292158204407,
+        0.24360598462619512,
+        0.9598558174081311
+      ],
+      "offset_m": -0.7669856997225907,
+      "median_inlier_absolute_distance_m": 0.003661991365140671,
+      "p90_inlier_absolute_distance_m": 0.007247112630630603,
+      "frame0_camera_height_above_plane_m": 0.7669856997225907
+    },
+    "T_ground_from_frame0_camera": [
+      [
+        0.47580775390691143,
+        -0.8336247186440019,
+        0.28049386764734885,
+        -2.7755575615628914e-17
+      ],
+      [
+        -0.8684895205355041,
+        -0.49570752739898005,
+        0,
+        -1.3877787807814457e-17
+      ],
+      [
+        0.13904292158204407,
+        -0.24360598462619512,
+        -0.9598558174081311,
+        0.7669856997225907
+      ],
+      [
+        0,
+        0,
+        0,
+        1
+      ]
+    ]
+  },
+  "transform_applied_to": "SfM, RGB-D ORB-SLAM3, and IMU rotations use the same fixed world transform; no per-channel trajectory fit was applied.",
+  "residuals": {
+    "pose_count": 19,
+    "interval_count": 18,
+    "absolute_position_error_vs_rgbd_m": {
+      "median": 0.0060651738089243425,
+      "p90": 0.011514469146301835,
+      "max": 0.011789294097199103,
+      "mean": 0.006323811656760405
+    },
+    "absolute_rotation_error_vs_rgbd_deg": {
+      "median": 0.33929322420307223,
+      "p90": 0.78397925115954,
+      "max": 0.9824194518332497,
+      "mean": 0.3689404967359236
+    },
+    "absolute_rotation_error_vs_imu_deg": {
+      "median": 7.425836336926992,
+      "p90": 12.411023152210472,
+      "max": 12.85536630505188,
+      "mean": 6.896140440538198
+    },
+    "interval_translation_displacement_error_vs_rgbd_m": {
+      "median": 0.002602898892754812,
+      "p90": 0.007855763990430241,
+      "max": 0.008951063744778233,
+      "mean": 0.0032608389681922888
+    },
+    "interval_rotation_error_vs_rgbd_deg": {
+      "median": 0.20885611682846783,
+      "p90": 0.37099938952035516,
+      "max": 0.5788916064673209,
+      "mean": 0.21657592899864112
+    },
+    "interval_rotation_error_vs_imu_deg": {
+      "median": 0.8383609098219542,
+      "p90": 1.1177123013741732,
+      "max": 1.3123131102640222,
+      "mean": 0.7938887140786786
+    }
+  },
+  "depth_calibration_context": {
+    "metric_scale_source": "registered depth at frame 25",
+    "scale_m_per_unit": 0.0635169900669396,
+    "heldout_depth_frames": 14,
+    "heldout_observations": 5757,
+    "median_absolute_depth_error_m": 0.016339549453543767,
+    "p90_absolute_depth_error_m": 0.0431151752074049,
+    "median_absolute_relative_depth_error": 0.019157845293133295,
+    "depth_to_rgb_visual_remapping_check": "not performed by this transform; needs synchronized RGB/depth image inputs"
+  },
+  "limitations": [
+    "ORB-SLAM3 is a comparison reference, not independent ground truth.",
+    "The plane is fit to sparse SfM points; 1,011/1,709 points were outside the 8 mm plane-inlier threshold, so the cloud includes non-plane/outlier observations.",
+    "IMU translation is excluded because the recorded inertial translation drifts; only its gyro-derived rotation is compared.",
+    "The depth-to-RGB visual calibration/remapping check remains pending."
+  ]
+}

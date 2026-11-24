@@ -77,6 +77,10 @@ def project(points,cal):
                              (scaled_y+dy)*cal["fy"]+cal["ppy"]))
 
 
+class DepthPairingError(ValueError):
+    """A colour frame has no depth observation within the pairing limit."""
+
+
 class Recording:
     def __init__(self,path):
         self.path=Path(path)
@@ -121,12 +125,20 @@ class Recording:
         if p["encoding"] not in ("16UC1","mono16"):raise ValueError("16-bit depth required")
         return np.frombuffer(p["data"],dtype="<u2").reshape(p["height"],p["width"])*self.depth_unit
 
-    def cloud_for_color(self,index,max_offset_ms=20.):
+    def depth_pair_for_color(self,index,max_offset_ms=20.):
+        if not np.isfinite(max_offset_ms) or max_offset_ms < 0:
+            raise ValueError("depth pairing limit must be finite and nonnegative")
+        if not len(self.depth_times):
+            raise DepthPairingError("recording has no depth observations")
         time=self.color_times[index]
         depth_index=int(np.argmin(np.abs(self.depth_times-time)))
         offset=abs(int(self.depth_times[depth_index])-int(time))/1e6
         if offset>max_offset_ms:
-            raise ValueError("colour/depth offset exceeds pairing limit")
+            raise DepthPairingError("colour/depth offset exceeds pairing limit")
+        return depth_index,offset
+
+    def cloud_for_color(self,index,max_offset_ms=20.):
+        depth_index,offset=self.depth_pair_for_color(index,max_offset_ms)
         z=self.image(DEPTH,depth_index).ravel()
         good=(z>.05)&(z<6.)
         r,t=self.color_from_depth
