@@ -25,3 +25,30 @@ python scripts/export_sfm_world_frame.py \
   --outdir local-results/080033-world-frame
 Rscript scripts/plot_sfm_world_frame.R local-results/080033-world-frame 080033
 ```
+
+## Gravity-aligned world frame
+
+`scripts/export_sfm_gravity_frame.py` defines world X by projecting the first RGB camera's forward axis onto the horizontal plane. World Z points opposite gravity and world Y points left. The ground height is set 0.1 m below the grass height estimated from the mean frame-0 feature depth. The same transform applies to the camera poses and to the 3D points.
+
+Pass `--frame-inputs` with the shared gravity direction in the first RGB camera and the mean feature depth in metres.
+
+```json
+{
+  "recording": "20261119_073137.db3",
+  "gravity_down_camera0": [0, 0.6, 0.8],
+  "mean_feature_depth_m": 0.75
+}
+```
+
+The values above illustrate the input format. For a recording with a verified opening rest window and paired frame-0 depth, `--bag` and `--verified-rest-end-s` measure the inputs directly. The exporter averages the resting accelerometer samples in the RGB camera axes and averages calibrated depth at the first frame's SIFT features. Use the recorded accelerometer-to-RGB clock shift with `--accel-time-shift-ms` when it is available.
+
+```sh
+python scripts/export_sfm_gravity_frame.py \
+  --frame-inputs frame-inputs.json \
+  --sfm reconstruction.json --cloud structure.npz \
+  --rgbd-channels channels.json --outdir world-output
+python scripts/plot_sfm_comparisons.py \
+  --world-frame world-output/world-frame.json --output world-output/camera-paths.png
+python scripts/plot_sfm_comparisons.py \
+  --residuals window-residuals.csv --output motion-residuals.pdf
+```
