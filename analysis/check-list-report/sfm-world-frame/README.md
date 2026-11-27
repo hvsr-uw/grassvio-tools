@@ -1,4 +1,4 @@
-# 080033 SfM in the world frame
+# 080033 SfM in the fitted ground-plane frame
 
 ![The SfM points, camera paths, and camera height in the ground-aligned world frame](080033-sfm-world-frame.png)
 
@@ -24,4 +24,33 @@ python scripts/export_sfm_world_frame.py \
   --orb analysis/audit-imu-preint/runs/080033_orb_poses.json \
   --outdir local-results/080033-world-frame
 Rscript scripts/plot_sfm_world_frame.R local-results/080033-world-frame 080033
+```
+
+## Gravity-aligned world frame
+
+`scripts/export_sfm_gravity_frame.py` projects the reference RGB camera's forward axis onto the horizontal plane for world X. World Z points opposite gravity and world Y points left. The origin is on the ground directly below the reference camera. The same rigid transform applies to the SfM camera poses and 3D points.
+
+Pass the shared per-recording `world_frame.json` to `--frame-inputs`. The exporter checks that the provided rotation and translation agree with the gravity, heading, and grass height. When the shared reference is a later frame, the exporter reanchors the reconstruction at that RGB frame. Include that frame in the reconstruction and in the connected RGB-D trajectory if you supply one.
+
+For a camera-0 run, `--frame-inputs` also accepts the gravity direction in the first RGB camera and the mean feature depth in metres. This path estimates the ground 0.1 m below the grass surface.
+
+```json
+{
+  "recording": "20261119_073137.db3",
+  "gravity_down_camera0": [0, 0.6, 0.8],
+  "mean_feature_depth_m": 0.75
+}
+```
+
+The values above illustrate the input format. For a recording with a verified opening rest window and paired frame-0 depth, `--bag` and `--verified-rest-end-s` measure the inputs directly. The exporter averages the resting accelerometer samples in the RGB camera axes and averages calibrated depth at the first frame's SIFT features. Use the recorded accelerometer-to-RGB clock shift with `--accel-time-shift-ms` when it is available.
+
+```sh
+python scripts/export_sfm_gravity_frame.py \
+  --frame-inputs /path/to/shared/world_frame.json \
+  --sfm reconstruction.json --cloud structure.npz \
+  --rgbd-channels channels.json --outdir world-output
+python scripts/plot_sfm_comparisons.py \
+  --world-frame world-output/world-frame.json --output world-output/camera-paths.png
+python scripts/plot_sfm_comparisons.py \
+  --residuals window-residuals.csv --output motion-residuals.pdf
 ```
