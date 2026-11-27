@@ -1,4 +1,4 @@
-# 080033 SfM in the world frame
+# 080033 SfM in the fitted ground-plane frame
 
 ![The SfM points, camera paths, and camera height in the ground-aligned world frame](080033-sfm-world-frame.png)
 
@@ -28,9 +28,11 @@ Rscript scripts/plot_sfm_world_frame.R local-results/080033-world-frame 080033
 
 ## Gravity-aligned world frame
 
-`scripts/export_sfm_gravity_frame.py` defines world X by projecting the first RGB camera's forward axis onto the horizontal plane. World Z points opposite gravity and world Y points left. The ground height is set 0.1 m below the grass height estimated from the mean frame-0 feature depth. The same transform applies to the camera poses and to the 3D points.
+`scripts/export_sfm_gravity_frame.py` projects the reference RGB camera's forward axis onto the horizontal plane for world X. World Z points opposite gravity and world Y points left. The origin is on the ground directly below the reference camera. The same rigid transform applies to the SfM camera poses and 3D points.
 
-Pass `--frame-inputs` with the shared gravity direction in the first RGB camera and the mean feature depth in metres.
+Pass the shared per-recording `world_frame.json` to `--frame-inputs`. The exporter checks that the provided rotation and translation agree with the gravity, heading, and grass height. When the shared reference is a later frame, the exporter reanchors the reconstruction at that RGB frame. Include that frame in the reconstruction and in the connected RGB-D trajectory if you supply one.
+
+For a camera-0 run, `--frame-inputs` also accepts the gravity direction in the first RGB camera and the mean feature depth in metres. This path estimates the ground 0.1 m below the grass surface.
 
 ```json
 {
@@ -44,7 +46,7 @@ The values above illustrate the input format. For a recording with a verified op
 
 ```sh
 python scripts/export_sfm_gravity_frame.py \
-  --frame-inputs frame-inputs.json \
+  --frame-inputs /path/to/shared/world_frame.json \
   --sfm reconstruction.json --cloud structure.npz \
   --rgbd-channels channels.json --outdir world-output
 python scripts/plot_sfm_comparisons.py \

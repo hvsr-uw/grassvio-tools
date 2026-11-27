@@ -25,7 +25,9 @@ def plot_world(path, output):
     data = json.loads(path.read_text(encoding="utf-8"))
     inputs = data["world_frame_inputs"]
     frames = data["registered_frames"]
+    reference_frame = data.get("reference_frame", 0)
     sfm = np.asarray(data["sfm_poses_camera_to_world"])[:, :3, 3]
+    anchor = sfm[frames.index(reference_frame)]
     rgbd_poses = data["rgbd_poses_camera_to_world"]
     rgbd = np.asarray([np.asarray(pose)[:3, 3] if pose is not None else [np.nan] * 3
                        for pose in rgbd_poses]) if rgbd_poses is not None else None
@@ -41,14 +43,16 @@ def plot_world(path, output):
     scene.plot(*sfm.T, color=BLUE, marker=".", label="SfM")
     if rgbd is not None:
         scene.plot(*rgbd.T, color=GRAY, linestyle="--", label=data["rgbd_reference"])
-    scene.plot([0, 0], [0, 0], [0, sfm[0, 2]], color=ORANGE, linestyle=":", linewidth=1.4)
+    scene.plot([0, anchor[0]], [0, anchor[1]], [0, anchor[2]],
+               color=ORANGE, linestyle=":", linewidth=1.4)
     scene.scatter(0, 0, 0, marker="x", color=ORANGE, s=45, label="Ground origin")
-    scene.scatter(*sfm[0], color=ORANGE, s=25)
+    scene.scatter(*anchor, color=ORANGE, s=25)
     scene.set(xlabel="World X (m)", ylabel="World Y (m)", zlabel="World Z (m)")
     scene.view_init(elev=24, azim=-63)
     scene.legend(loc="upper left", bbox_to_anchor=(-.37, .94), frameon=False)
     provenance = ("Preview inputs\n" + inputs["gravity_source"] + "\n" + inputs["feature_depth_source"]
-                  if preview else f"Frame 0 height: {sfm[0, 2]:.3f} m\n{len(frames)} registered camera views")
+                  if preview else f"Frame {reference_frame} height: {anchor[2]:.3f} m\n"
+                  f"{len(frames)} registered camera views")
     fig.text(.745, .75, "\n".join(fill(line, width=35) for line in provenance.splitlines()),
              va="top", color=GRAY, fontsize=9)
     combined = np.concatenate((sfm, rgbd)) if rgbd is not None else sfm
@@ -62,8 +66,8 @@ def plot_world(path, output):
         ax.plot(sfm[:, i] * 100, sfm[:, j] * 100, color=BLUE, marker=".", linewidth=1.8)
         if rgbd is not None:
             ax.plot(rgbd[:, i] * 100, rgbd[:, j] * 100, color=GRAY, linestyle="--", linewidth=1.5)
-        ax.scatter(sfm[0, i] * 100, sfm[0, j] * 100, color=ORANGE, s=32, zorder=3)
-        ax.annotate("Frame 0", sfm[0, [i, j]] * 100, xytext=(4, 7),
+        ax.scatter(anchor[i] * 100, anchor[j] * 100, color=ORANGE, s=32, zorder=3)
+        ax.annotate(f"Frame {reference_frame}", anchor[[i, j]] * 100, xytext=(4, 7),
                     textcoords="offset points", color=ORANGE, fontsize=8)
         ax.set(xlabel=f"World {AXES[i]} (cm)", ylabel=f"World {AXES[j]} (cm)", aspect="equal",
                title=f"{AXES[i]}–{AXES[j]} camera path")

@@ -15,13 +15,15 @@ CAMERA_FORWARD = np.array([0.0, 0.0, 1.0])
 GRASS_HEIGHT_M = 0.1
 
 
-def world_from_camera0(gravity_down, mean_depth_m):
+def world_from_camera0(gravity_down, mean_depth_m, grass_height_m=GRASS_HEIGHT_M):
     """Use the optical axis for heading and the gravity direction for vertical."""
     down = np.asarray(gravity_down, dtype=float)
     if down.shape != (3,) or not np.isfinite(down).all() or np.linalg.norm(down) < 1e-8:
         raise ValueError("gravity must be a finite, nonzero 3-vector in RGB camera 0")
     if not np.isfinite(mean_depth_m) or mean_depth_m <= 0:
         raise ValueError("mean frame-0 feature depth must be positive and in metres")
+    if not np.isfinite(grass_height_m) or grass_height_m < 0:
+        raise ValueError("grass height must be finite, nonnegative, and in metres")
     down = down / np.linalg.norm(down)
     up = -down
     left = np.cross(up, CAMERA_FORWARD)
@@ -33,7 +35,7 @@ def world_from_camera0(gravity_down, mean_depth_m):
     forward = np.cross(left, up)
     transform = np.eye(4)
     transform[:3, :3] = [forward, left, up]
-    transform[2, 3] = mean_depth_m * float(CAMERA_FORWARD @ down) + GRASS_HEIGHT_M
+    transform[2, 3] = mean_depth_m * float(CAMERA_FORWARD @ down) + grass_height_m
     if transform[2, 3] <= 0:
         raise ValueError("the estimated ground must lie below the starting camera")
     return transform
@@ -89,6 +91,35 @@ def read_json(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def world_from_reference(inputs, recording):
+    """Read the shared frame export or derive a transform from camera-0 inputs."""
+    if inputs.get("format") != "grassvio-world-frame-v1":
+        if inputs["recording"] != recording:
+            raise ValueError("the world-frame inputs and SfM must refer to the same recording")
+        transform = world_from_camera0(inputs["gravity_down_camera0"], inputs["mean_feature_depth_m"])
+        return 0, transform, GRASS_HEIGHT_M
+
+    if inputs["recording"] not in (recording, Path(recording).stem):
+        raise ValueError("the shared world frame and SfM must refer to the same recording")
+    if inputs["position_unit"] != "m":
+        raise ValueError("the shared world frame must use metres")
+    frame = inputs["reference"]["frame"]
+    if type(frame) is not int or frame < 0:
+        raise ValueError("the shared reference must be a nonnegative RGB frame index")
+    grass_height = inputs["grass_height_m"]
+    expected = world_from_camera0(inputs["gravity_down_camera"], inputs["grass_depth_m"], grass_height)
+    rotation = np.asarray(inputs["rotation_world_from_camera"], dtype=float)
+    translation = np.asarray(inputs["translation_world_from_camera_m"], dtype=float)
+    if (rotation.shape != (3, 3) or translation.shape != (3,)
+            or not np.allclose(rotation, expected[:3, :3], atol=1e-6, rtol=0)
+            or not np.allclose(translation, expected[:3, 3], atol=1e-6, rtol=0)):
+        raise ValueError("the shared transform does not match its gravity, heading, and ground height")
+    transform = np.eye(4)
+    transform[:3, :3] = rotation
+    transform[:3, 3] = translation
+    return frame, transform, grass_height
+
+
 def camera0_poses(poses, frames, label):
     poses = np.asarray(poses, dtype=float)
     if poses.shape != (len(frames), 4, 4) or not np.isfinite(poses).all():
@@ -130,20 +161,25 @@ def load_rgbd(path, recording, is_channels):
 
 def export(sfm_path, cloud_path, rgbd_path, inputs, outdir, *, rgbd_channels=False):
     sfm = read_json(sfm_path)
-    if sfm["recording"] != inputs["recording"]:
-        raise ValueError("the world-frame inputs and SfM must refer to the same recording")
     if sfm["pose_units"] != "metres_from_initial_depth" or not sfm["metric_scale"]["usable"]:
         raise ValueError("the SfM reconstruction must already have metric scale")
 
     frames = sfm["registered_frames"]
     sfm_poses = camera0_poses(sfm["poses_camera_to_world"], frames, "SfM poses")
-    transform = world_from_camera0(inputs["gravity_down_camera0"], inputs["mean_feature_depth_m"])
+    reference_frame, world_from_anchor, grass_height = world_from_reference(inputs, sfm["recording"])
+    if reference_frame not in frames:
+        raise ValueError(f"SfM has no registered pose for the shared reference frame {reference_frame}")
+    # The SfM points and poses use camera 0, so move them through the reference camera first.
+    transform = world_from_anchor @ np.linalg.inv(sfm_poses[frames.index(reference_frame)])
     sfm_world = transform @ sfm_poses
 
     rgbd_world = None
     if rgbd_path is not None:
         reference = load_rgbd(rgbd_path, sfm["recording"], rgbd_channels)
-        rgbd_world = [transform @ reference[frame] if frame in reference else None for frame in frames]
+        if reference_frame not in reference:
+            raise ValueError(f"RGB-D has no connected pose for the shared reference frame {reference_frame}")
+        rgbd_transform = world_from_anchor @ np.linalg.inv(reference[reference_frame])
+        rgbd_world = [rgbd_transform @ reference[frame] if frame in reference else None for frame in frames]
 
     world_points = colors = None
     if cloud_path is not None:
@@ -161,10 +197,11 @@ def export(sfm_path, cloud_path, rgbd_path, inputs, outdir, *, rgbd_channels=Fal
     result = {
         "recording": sfm["recording"],
         "units": "metres",
-        "axes": {"x": "frame-0 optical axis projected onto the horizontal plane",
+        "axes": {"x": "reference camera optical axis projected onto the horizontal plane",
                  "y": "left", "z": "opposite gravity"},
-        "origin": "ground-height plane directly below camera 0",
-        "grass_height_m": GRASS_HEIGHT_M,
+        "origin": "ground-height plane directly below the reference camera",
+        "reference_frame": reference_frame,
+        "grass_height_m": grass_height,
         "world_frame_inputs": inputs,
         "world_from_first_rgb_camera": transform.tolist(),
         "metric_scale": sfm["metric_scale"],
@@ -208,7 +245,8 @@ def main():
     rgbd.add_argument("--orb", type=Path, help="stride-1 ORB-SLAM3 RGB-D poses")
     rgbd.add_argument("--rgbd-channels", type=Path, help="saved GrassVIO channels.json")
     source = parser.add_mutually_exclusive_group(required=True)
-    source.add_argument("--frame-inputs", type=Path, help="shared camera-0 gravity and feature depth JSON")
+    source.add_argument("--frame-inputs", type=Path,
+                        help="shared world-frame JSON or camera-0 gravity and feature depth JSON")
     source.add_argument("--bag", type=Path, help="extract inputs from an original .db3 recording")
     parser.add_argument("--verified-rest-end-s", type=float, help="end time from RGB frame 0")
     parser.add_argument("--accel-time-shift-ms", type=float, default=0)
